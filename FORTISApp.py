@@ -1,8 +1,6 @@
-from flask import Flask, render_template, flash, redirect, url_for, request, g
-from wtforms import Form, DecimalField, TextAreaField, RadioField, SelectField, validators
-from wtforms.fields.html5 import DateField
-import datetime as dt
+from flask import Flask, render_template, flash, redirect, url_for, request, g, session
 import sqlite3
+from functools import wraps
 import os
 import pandas as pd
 
@@ -11,7 +9,7 @@ assert os.path.exists('AppSecretKey.txt'), "Unable to locate app secret key"
 with open('AppSecretKey.txt','r') as f:
     key=f.read()
 app.secret_key=key
-DATABASE = 'FORTIS.db'
+DATABASE = 'users.db'
 assert os.path.exists(DATABASE), "Unable to locate database"
 
 #Set subdomain...
@@ -52,15 +50,50 @@ def pandas_db(query):
     db.close()
     return df
 
+#Check if user is logged in
+def is_logged_in(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if 'logged_in' in session:
+            return f(*args, **kwargs)
+        else:
+            flash('Unauthorised, please login', 'danger')
+            return redirect(subd+'/')
+    return wrap
+
 #Index
-@app.route('/')
+@app.route('/', methods=["GET","POST"])
 def index():
+    if request.method == 'POST':
+        #Get form fields
+        username = request.form['username']
+        password_candidate = request.form['password']
+        result = query_db('SELECT * FROM users WHERE username = ?', [username])
+        if result is not None:
+            data = query_db('SELECT * FROM users WHERE username = ?', [username], one=True)
+            password = data['password']
+            #Compare passwords
+            if password_candidate == password:
+                #Passed
+                session['logged_in'] = True
+                session['username'] = username
+                flash('You are now logged in', 'success')
+                return redirect(subd+'/')
+            else:
+                flash('Incorrect password', 'danger')
+                return redirect(subd+'/')
+        else:
+            flash('Username not found', 'danger')
+            return redirect(subd+'/')
     return render_template('home.html',subd=subd)
 
-#Login
-@app.route('/login')
-def login():
-    return render_template('login.html',subd=subd)
+#Logout
+@app.route('/logout')
+@is_logged_in
+def logout():
+    session.clear()
+    flash('You are now logged out', 'success')
+    return redirect(subd+'/')
 
 if __name__ == '__main__':
     app.run(debug=True)

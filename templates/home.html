@@ -2,9 +2,24 @@
 
 {% block body %}
   <div class="jumbotron text-center">
-    <h1>Welcome to the WCSSP-FORTIS workshops website</h1>
-    <p class="lead">
-      Here, trainees can view the workshop schedule and download the workshop training material.
-    <p>
+    <h1>Welcome to the WCSSP-FORTIS training website</h1>
   </div>
+  <hr>
+  {% if session %}
+    <h2>You are currently logged in as {{ session.username }}</h2>
+  {% else %}
+   <h2>Please log in</h2>
+    <form action="" method="POST">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" class="form-control" value={{ request.form.username }}>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" class="form-control" value={{ request.form.password }}>
+      </div>
+      <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+  {% endif %}
+  <hr>
 {% endblock %}
