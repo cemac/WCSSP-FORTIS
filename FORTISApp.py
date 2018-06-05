@@ -89,6 +89,14 @@ def index():
             return redirect(subd+'/')
     return render_template('home.html',subd=subd)
 
+@app.route('/upload', methods=["GET","POST"])
+def upload():
+    #If user tries to upload a file
+    if request.method == 'POST':
+        redirect(subd+'/upload')
+    #If user just navigates to page
+    return render_template('upload.html',subd=subd)
+
 #Logout
 @app.route('/logout')
 @is_logged_in
