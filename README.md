@@ -1,7 +1,9 @@
 Before running this web app, ensure the sqlite3 database users.db is present. If it isn't,
 ensure users.csv (not version controlled) is present and build the sqlite3 database using:
 $ ./makeUsersDB.sh
-(This relies on sqlite3 being installed)
+Also ensure files.db is present. If it isn't, create a new blank database using:
+$ sqlite3 files.db < files.sql
+(The above two commands rely on sqlite3 being installed)
 
 Note that in order for the app to run successfully, the file AppSecretKey.txt must also
 be present in the app's root directory (not version-controlled)

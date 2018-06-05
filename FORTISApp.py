@@ -9,8 +9,8 @@ assert os.path.exists('AppSecretKey.txt'), "Unable to locate app secret key"
 with open('AppSecretKey.txt','r') as f:
     key=f.read()
 app.secret_key=key
-DATABASE = 'users.db'
-assert os.path.exists(DATABASE), "Unable to locate database"
+assert os.path.exists('users.db'), "Unable to locate users.db database"
+assert os.path.exists('files.db'), "Unable to locate files.db database"
 
 #Set subdomain...
 #If running locally (or index is the domain) set to blank, i.e. subd=""
@@ -22,10 +22,10 @@ assert os.path.exists(DATABASE), "Unable to locate database"
 subd=""
 
 #Connect to DB
-def get_db():
+def get_db(DBname):
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
+        db = g._database = sqlite3.connect(DBname)
         db.row_factory = sqlite3.Row
     return db
 
@@ -37,15 +37,15 @@ def close_connection(exception):
         db.close()
 
 #Query DB
-def query_db(query, args=(), one=False):
-    cur = get_db().execute(query, args)
+def query_db(DBname,query,args=(),one=False):
+    cur = get_db(DBname).execute(query, args)
     rv = cur.fetchall()
     cur.close()
     return (rv[0] if rv else None) if one else (rv if rv else None)
 
 #Query DB pandas
-def pandas_db(query):
-    db = get_db()
+def pandas_db(DBname,query):
+    db = get_db(DBname)
     df = pd.read_sql_query(query,db)
     db.close()
     return df
@@ -68,9 +68,9 @@ def index():
         #Get form fields
         username = request.form['username']
         password_candidate = request.form['password']
-        result = query_db('SELECT * FROM users WHERE username = ?', [username])
+        result = query_db('users.db', 'SELECT * FROM users WHERE username = ?', [username])
         if result is not None:
-            data = query_db('SELECT * FROM users WHERE username = ?', [username], one=True)
+            data = query_db('users.db', 'SELECT * FROM users WHERE username = ?', [username], one=True)
             password = data['password']
             usertype = data['usertype']
             #Compare passwords
