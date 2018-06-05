@@ -72,11 +72,13 @@ def index():
         if result is not None:
             data = query_db('SELECT * FROM users WHERE username = ?', [username], one=True)
             password = data['password']
+            usertype = data['usertype']
             #Compare passwords
             if password_candidate == password:
                 #Passed
                 session['logged_in'] = True
                 session['username'] = username
+                session['usertype'] = usertype
                 flash('You are now logged in', 'success')
                 return redirect(subd+'/')
             else:

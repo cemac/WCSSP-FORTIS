@@ -5,7 +5,7 @@
     <h1>Welcome to the WCSSP-FORTIS training website</h1>
   </div>
   <hr>
-  {% if session %}
+  {% if session.logged_in %}
     <h2>You are currently logged in as {{ session.username }}</h2>
   {% else %}
    <h2>Please log in</h2>
