@@ -1,13 +1,10 @@
-Before running this web app, build the sqlite3 database from the ASCII dump file.
-(The database file is binary, so the ASCII file is better for version control).
-This is done by typing the following (assumes sqlite3 is installed):
-$ sqlite3 FORTIS.db < FORTIS.sql
+Before running this web app, ensure the sqlite3 database users.db is present. If it isn't,
+ensure users.csv (not version controlled) is present and build the sqlite3 database using:
+$ ./makeUsersDB.sh
+(This relies on sqlite3 being installed)
 
-Similarly, to update the dump file before committing to the git repo, type:
-$ sqlite3 FORTIS.db .dump > FORTIS.sql
-
-Note that in order for the app to run successfully, the file AppSecretKey.txt must be in the app's root directory.
-This file is not version-controlled.
+Note that in order for the app to run successfully, the file AppSecretKey.txt must also
+be present in the app's root directory (not version-controlled)
 
 To run the app in development mode (on localhost), do the following:
 - In FORTISApp.py, change the subdomain variable (subd) near the top of the script from "/WSCCP-FORTIS" to "" (i.e. an empty string)
