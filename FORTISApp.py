@@ -50,7 +50,7 @@ def pandas_db(DBname,query):
     db.close()
     return df
 
-#Check if user is logged in
+#Check if user is logged in (either as a trainer or a trainee)
 def is_logged_in(f):
     @wraps(f)
     def wrap(*args, **kwargs):
@@ -58,6 +58,18 @@ def is_logged_in(f):
             return f(*args, **kwargs)
         else:
             flash('Unauthorised, please login', 'danger')
+            return redirect(subd+'/')
+    return wrap
+
+#Check if user is logged in as a trainer
+def is_logged_in_as_trainer(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        print(session)
+        if 'logged_in' in session and session['usertype']=='trainer':
+            return f(*args, **kwargs)
+        else:
+            flash('Unauthorised, please login as a trainer', 'danger')
             return redirect(subd+'/')
     return wrap
 
@@ -89,7 +101,18 @@ def index():
             return redirect(subd+'/')
     return render_template('home.html',subd=subd)
 
+@app.route('/training-material')
+@is_logged_in
+def training_material():
+    return render_template('training-material.html',subd=subd)
+
+@app.route('/trainer-material')
+@is_logged_in_as_trainer
+def trainer_material():
+    return render_template('trainer-material.html',subd=subd)
+
 @app.route('/upload', methods=["GET","POST"])
+@is_logged_in_as_trainer
 def upload():
     #If user tries to upload a file
     if request.method == 'POST':

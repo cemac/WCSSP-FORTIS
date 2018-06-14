@@ -7,9 +7,9 @@
       <ul class="nav navbar-nav">
         <li><a href={{subd}}/>Home</a></li>
         {% if session.logged_in  %}
-          <li><a href={{subd}}/>Training material</a></li>
+          <li><a href={{subd}}/training-material>Training material</a></li>
           {% if session.usertype=="trainer" %}
-            <li><a href={{subd}}/>Trainer material</a></li>
+            <li><a href={{subd}}/trainer-material>Trainer material</a></li>
             <li><a href={{subd}}/upload>Upload new material</a></li>
           {% endif %}
         {% endif %}
