@@ -1,10 +1,16 @@
 from flask import Flask, render_template, flash, redirect, url_for, request, g, session
+from wtforms import Form, validators, StringField
+from werkzeug.utils import secure_filename
 import sqlite3
 from functools import wraps
 import os
 import pandas as pd
 
 app = Flask(__name__)
+UPLOAD_FOLDER = 'Uploads'
+if not os.path.isdir(UPLOAD_FOLDER):
+    os.mkdir(UPLOAD_FOLDER)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 assert os.path.exists('AppSecretKey.txt'), "Unable to locate app secret key"
 with open('AppSecretKey.txt','r') as f:
     key=f.read()
@@ -65,7 +71,6 @@ def is_logged_in(f):
 def is_logged_in_as_trainer(f):
     @wraps(f)
     def wrap(*args, **kwargs):
-        print(session)
         if 'logged_in' in session and session['usertype']=='trainer':
             return f(*args, **kwargs)
         else:
@@ -111,14 +116,29 @@ def training_material():
 def trainer_material():
     return render_template('trainer-material.html',subd=subd)
 
+class UploadForm(Form):
+    title = StringField(u'Title of material',[validators.Length(min=1,max=50)])
+
 @app.route('/upload', methods=["GET","POST"])
 @is_logged_in_as_trainer
 def upload():
+    form = UploadForm(request.form)
     #If user tries to upload a file
-    if request.method == 'POST':
-        redirect(subd+'/upload')
+    if request.method == 'POST' and form.validate():
+        #Get file info
+        newfile = request.files['file']
+        #No selected file
+        if newfile.filename == '':
+            flash('No file selected','danger')
+            return redirect(subd+'/upload')
+        #Upload file
+        else:
+            filename = secure_filename(newfile.filename)
+            newfile.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            flash('File uploaded', 'success')
+            return redirect(subd+'/upload')
     #If user just navigates to page
-    return render_template('upload.html',subd=subd)
+    return render_template('upload.html',subd=subd,form=form)
 
 #Logout
 @app.route('/logout')

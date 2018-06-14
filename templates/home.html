@@ -6,7 +6,7 @@
   </div>
   {% if session.logged_in %}
     <h2><small>You are currently logged in as</small> {{ session.username }}</h2>
-    <h4>You can view the training material <a href={{subd}}/>here</a></h4>
+    <h4>You can view the training material <a href={{subd}}/training-material>here</a></h4>
   {% else %}
    <h2>Please log in</h2>
     <form action="" method="POST">
