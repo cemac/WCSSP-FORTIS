@@ -11,17 +11,16 @@
     </div>
     <div class="form-group">
       {{render_field(form.title, class_="form-control", placeholder="e.g.'Tropical cyclone track forecasting'. This is the name the trainees will see.")}}
+      <br>
+      {{render_field(form.description, class_="form-control", placeholder="(Optional) Add a short description of the material's content")}}
+      <br>
+      {{render_field(form.workshop, class_="form-control")}}
+      <br>
+      {{render_field(form.type, class_="form-control")}}
     </div>
 
+
     <!-- <div class="form-group">
-      <label for="title">Title of material</label>
-      <input class="form-control" type="text" placeholder="e.g.'Tropical cyclone track forecasting'. This is the name the trainees will see.">
-    </div> -->
-    <!-- <div class="form-group">
-      <label for="description">Description of material</label>
-      <textarea class="form-control" id="description" rows="3" placeholder="(Optional) Add a short description of the material's content"></textarea>
-    </div>
-    <div class="form-group">
       <label for="whichDay">Which day of the workshop is the material for?</label>
       <select class="form-control" id="whichDay">
         <option>Please Select</option>
@@ -30,14 +29,6 @@
         <option>3</option>
         <option>4</option>
         <option>5</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="lecOrPrac">Are you uploading material for lectures or practicals?</label>
-      <select class="form-control" id="lecOrPrac">
-        <option>Please Select</option>
-        <option>Lectures</option>
-        <option>Practicals</option>
       </select>
     </div>
     <div class="form-group">

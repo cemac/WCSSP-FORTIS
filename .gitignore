@@ -1,5 +1,6 @@
 users.csv
 users.db
 files.db
+workshops.db
 .directory
 AppSecretKey.txt

@@ -1,5 +1,5 @@
 from flask import Flask, render_template, flash, redirect, url_for, request, g, session
-from wtforms import Form, validators, StringField
+from wtforms import Form, validators, StringField, TextAreaField, SelectField
 from werkzeug.utils import secure_filename
 import sqlite3
 from functools import wraps
@@ -17,6 +17,7 @@ with open('AppSecretKey.txt','r') as f:
 app.secret_key=key
 assert os.path.exists('users.db'), "Unable to locate users.db database"
 assert os.path.exists('files.db'), "Unable to locate files.db database"
+assert os.path.exists('workshops.db'), "Unable to locate workshops.db database"
 
 #Set subdomain...
 #If running locally (or index is the domain) set to blank, i.e. subd=""
@@ -78,6 +79,14 @@ def is_logged_in_as_trainer(f):
             return redirect(subd+'/')
     return wrap
 
+#Get list of workshops from workshop DB:
+def get_workshop_list():
+    workshopDF = pandas_db('workshops.db','SELECT * FROM workshops')
+    workshopList=[('blank','--Please select--')]
+    for w in workshopDF['workshop']:
+        workshopList.append((w,w))
+    return workshopList
+
 #Index
 @app.route('/', methods=["GET","POST"])
 def index():
@@ -117,12 +126,21 @@ def trainer_material():
     return render_template('trainer-material.html',subd=subd)
 
 class UploadForm(Form):
-    title = StringField(u'Title of material',[validators.Length(min=1,max=50)])
+    title = StringField(u'Title of material',[validators.required(),validators.Length(min=1,max=50)])
+    description = TextAreaField(u'Description of material',[validators.optional(),validators.Length(max=1000)])
+    workshop = SelectField(u'Select the workshop for which you are uploading material',\
+        [validators.NoneOf(('blank'),message='Please select')])
+    type = SelectField('Select the type of material you are uploading',\
+        [validators.NoneOf(('blank'),message='Please select')],\
+        choices=[('blank','--Please select--'),('lectures', 'Lecture material'),\
+        ('practicals', 'Material for practicals'), ('schedule', 'Workshop schedule'),\
+        ('other', 'Other (e.g. feedback forms)')])
 
 @app.route('/upload', methods=["GET","POST"])
 @is_logged_in_as_trainer
 def upload():
     form = UploadForm(request.form)
+    form.workshop.choices = get_workshop_list()
     #If user tries to upload a file
     if request.method == 'POST' and form.validate():
         #Get file info
