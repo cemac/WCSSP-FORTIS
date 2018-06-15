@@ -1,8 +1,39 @@
 {% extends 'layout.html' %}
 
 {% block body %}
-  <h1>Training material</h1>
-  <hr>
-  <p>Material will go here</p>
+  <div class="container">
+    <h1>Training material</h1>
+    <hr>
+    <h2>Workshop on 16-20 July 2018 (Met Office, Exeter, UK)</h2>
+    <div class="panel-group">
+      {% for iday in range(1,6) %}
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h4 class="panel-title">
+            <a data-toggle="collapse" href="#collapse{{iday}}">Day {{iday}}</a>
+          </h4>
+        </div>
+        <div id="collapse{{iday}}" class="panel-collapse collapse">
+          <div class="panel-body">
+            {% for type in ['Lectures','Practicals'] %}
+              <div class="panel panel-default">
+                <div class="panel-heading">
+                  <h4 class="panel-title">
+                    <a data-toggle="collapse" href="#collapse{{type}}{{iday}}">{{type}}</a>
+                  </h4>
+                </div>
+                <div id="collapse{{type}}{{iday}}" class="panel-collapse collapse">
+                  <div class="panel-body">
+                    {{type}} material for day {{iday}} will go here
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
   <hr>
 {% endblock %}
