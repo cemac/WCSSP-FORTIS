@@ -1,4 +1,4 @@
 PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
-CREATE TABLE files(id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT, title TEXT, description TEXT, whichDay INTEGER, lecOrPrac TEXT, forWho TEXT);
+CREATE TABLE files(id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT, title TEXT, description TEXT, workshop TEXT, type TEXT, who TEXT);
 COMMIT;

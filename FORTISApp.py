@@ -28,7 +28,7 @@ assert os.path.exists('workshops.db'), "Unable to locate workshops.db database"
 #
 subd=""
 
-#Connect to DB
+#Connect to DB for query
 def get_db(DBname):
     db = getattr(g, '_database', None)
     if db is None:
@@ -56,6 +56,16 @@ def pandas_db(DBname,query):
     df = pd.read_sql_query(query,db)
     db.close()
     return df
+
+#Insert entry into DB
+def insert_db(DBname,query,args=()):
+    conn = sqlite3.connect(DBname)
+    cur = conn.cursor()
+    cur.execute(query,args)
+    conn.commit()
+    cur.close()
+    conn.close()
+    return
 
 #Check if user is logged in (either as a trainer or a trainee)
 def is_logged_in(f):
@@ -128,13 +138,28 @@ def trainer_material():
 class UploadForm(Form):
     title = StringField(u'Title of material',[validators.required(),validators.Length(min=1,max=50)])
     description = TextAreaField(u'Description of material',[validators.optional(),validators.Length(max=1000)])
-    workshop = SelectField(u'Select the workshop for which you are uploading material',\
+    workshop = SelectField(u'Select the workshop that this material is for',\
         [validators.NoneOf(('blank'),message='Please select')])
     type = SelectField('Select the type of material you are uploading',\
         [validators.NoneOf(('blank'),message='Please select')],\
-        choices=[('blank','--Please select--'),('lectures', 'Lecture material'),\
-        ('practicals', 'Material for practicals'), ('schedule', 'Workshop schedule'),\
-        ('other', 'Other (e.g. feedback forms)')])
+        choices=[('blank','--Please select--'),
+        ('schedule', 'Workshop schedule'),\
+        ('lectures1', 'Lectures (Day 1)'),\
+        ('lectures2', 'Lectures (Day 2)'),\
+        ('lectures3', 'Lectures (Day 3)'),\
+        ('lectures4', 'Lectures (Day 4)'),\
+        ('lectures5', 'Lectures (Day 5)'),\
+        ('practicals1', 'Practicals (Day 1)'),\
+        ('practicals2', 'Practicals (Day 2)'),\
+        ('practicals3', 'Practicals (Day 3)'),\
+        ('practicals4', 'Practicals (Day 4)'),\
+        ('practicals5', 'Practicals (Day 5)'),\
+        ('other', 'Other')])
+    who = SelectField('Is the material for trainees (typically non-editable files, e.g. PDFs) or trainers (typically editable files, e.g. PPTs)',\
+        [validators.NoneOf(('blank'),message='Please select')],\
+        choices=[('blank','--Please select--'),
+        ('trainees', 'Trainees'),\
+        ('trainers', 'Trainers')])
 
 @app.route('/upload', methods=["GET","POST"])
 @is_logged_in_as_trainer
@@ -143,18 +168,26 @@ def upload():
     form.workshop.choices = get_workshop_list()
     #If user tries to upload a file
     if request.method == 'POST' and form.validate():
-        #Get file info
+        #Get file name
         newfile = request.files['file']
         #No selected file
         if newfile.filename == '':
             flash('No file selected','danger')
             return redirect(subd+'/upload')
-        #Upload file
-        else:
-            filename = secure_filename(newfile.filename)
-            newfile.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            flash('File uploaded', 'success')
-            return redirect(subd+'/upload')
+        #Get fields from web-form
+        filename = secure_filename(newfile.filename)
+        title = form.title.data
+        description = form.description.data
+        workshop = form.workshop.data
+        type = form.type.data
+        who = form.who.data
+        #Insert into files database:
+        insert_db('files.db',"INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
+        #Upload file:
+        newfile.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        #flash success message and reload page
+        flash('File uploaded successfully', 'success')
+        return redirect(subd+'/upload')
     #If user just navigates to page
     return render_template('upload.html',subd=subd,form=form)
 
