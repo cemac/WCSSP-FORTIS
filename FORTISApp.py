@@ -57,15 +57,16 @@ def pandas_db(DBname,query):
     db.close()
     return df
 
-#Insert entry into DB
+#Insert entry into DB and return the row id
 def insert_db(DBname,query,args=()):
     conn = sqlite3.connect(DBname)
     cur = conn.cursor()
     cur.execute(query,args)
     conn.commit()
+    id = cur.lastrowid
     cur.close()
     conn.close()
-    return
+    return id
 
 #Check if user is logged in (either as a trainer or a trainee)
 def is_logged_in(f):
@@ -182,9 +183,13 @@ def upload():
         type = form.type.data
         who = form.who.data
         #Insert into files database:
-        insert_db('files.db',"INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
-        #Upload file:
-        newfile.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        id = insert_db('files.db',"INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
+        #Upload file, calling it <id>.<ext>:
+        if '.' in filename:
+            ext = '.' + filename.rsplit('.')[-1]
+        else:
+            ext = ''
+        newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext))
         #flash success message and reload page
         flash('File uploaded successfully', 'success')
         return redirect(subd+'/upload')
