@@ -1,6 +1,7 @@
 {% extends 'layout.html' %}
 
 {% block body %}
+  {% set subData1 = filesData.loc[filesData['who']=='trainees'] %}
   <div class="container">
     <h1>Training material</h1>
     <hr>
@@ -15,7 +16,7 @@
         </div>
         <div id="collapse{{iday}}" class="panel-collapse collapse">
           <div class="panel-body">
-            {% for type in ['Lectures','Practicals'] %}
+            {% for type in ['lectures','practicals'] %}
               <div class="panel panel-default">
                 <div class="panel-heading">
                   <h4 class="panel-title">
@@ -24,7 +25,16 @@
                 </div>
                 <div id="collapse{{type}}{{iday}}" class="panel-collapse collapse">
                   <div class="panel-body">
-                    {{type}} material for day {{iday}} will go here
+                    <!-- <p>Files are listed below:</p> -->
+                      {% set subData2 = subData1.loc[subData1['type']==type+iday|string] %}
+                      {% for index, row in subData2.iterrows() %}
+                        {{row['title']}}
+                        <br>
+                        {{row['description']}}
+                        {% if loop.index != subData2|length %}
+                          <hr>
+                        {% endif %}
+                      {% endfor %}
                   </div>
                 </div>
               </div>

@@ -129,7 +129,8 @@ def index():
 @app.route('/training-material')
 @is_logged_in
 def training_material():
-    return render_template('training-material.html',subd=subd)
+    filesData = pandas_db('files.db','SELECT * FROM files')
+    return render_template('training-material.html',subd=subd,filesData=filesData)
 
 @app.route('/trainer-material')
 @is_logged_in_as_trainer
