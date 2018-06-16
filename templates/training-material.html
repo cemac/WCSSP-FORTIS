@@ -28,11 +28,15 @@
                     <!-- <p>Files are listed below:</p> -->
                       {% set subData2 = subData1.loc[subData1['type']==type+iday|string] %}
                       {% for index, row in subData2.iterrows() %}
-                        {{row['title']}}
-                        <br>
-                        {{row['description']}}
+                        <h3>
+                          <form action={{subd}}/download/{{row['id']}} method="post">
+                            <span class="glyphicon glyphicon-file" aria-hidden="true"></span>
+                            <a href="#" onclick="this.parentNode.submit()">{{row['title']}}</a>
+                          </form>
+                        </h3>
+                        <p style="font-size:20px">{{row['description']}}</p>
                         {% if loop.index != subData2|length %}
-                          <hr>
+                          <hr style="height:2px" />
                         {% endif %}
                       {% endfor %}
                   </div>

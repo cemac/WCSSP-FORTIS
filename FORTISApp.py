@@ -1,4 +1,4 @@
-from flask import Flask, render_template, flash, redirect, url_for, request, g, session
+from flask import Flask, render_template, flash, redirect, url_for, request, g, session, abort, send_from_directory
 from wtforms import Form, validators, StringField, TextAreaField, SelectField
 from werkzeug.utils import secure_filename
 import sqlite3
@@ -98,6 +98,13 @@ def get_workshop_list():
         workshopList.append((w,w))
     return workshopList
 
+def get_ext(filename):
+    if '.' in filename:
+        ext = '.' + filename.rsplit('.')[-1]
+    else:
+        ext = ''
+    return ext
+
 #Index
 @app.route('/', methods=["GET","POST"])
 def index():
@@ -186,16 +193,24 @@ def upload():
         #Insert into files database:
         id = insert_db('files.db',"INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
         #Upload file, calling it <id>.<ext>:
-        if '.' in filename:
-            ext = '.' + filename.rsplit('.')[-1]
-        else:
-            ext = ''
+        ext = get_ext(filename)
         newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext))
         #flash success message and reload page
         flash('File uploaded successfully', 'success')
         return redirect(subd+'/upload')
     #If user just navigates to page
     return render_template('upload.html',subd=subd,form=form)
+
+#Download file
+@app.route('/download/<string:id>', methods=['POST'])
+def download(id):
+    filename = query_db('files.db','SELECT * FROM files WHERE id = ?',(id,),one=True)['filename']
+    ext = get_ext(filename)
+    filepath = os.path.join(UPLOAD_FOLDER,id+ext)
+    if os.path.exists(filepath):
+        return send_from_directory(UPLOAD_FOLDER,id+ext,as_attachment=True,attachment_filename=filename)
+    else:
+        abort(404)
 
 #Logout
 @app.route('/logout')
