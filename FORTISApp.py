@@ -142,7 +142,8 @@ def training_material():
 @app.route('/trainer-material')
 @is_logged_in_as_trainer
 def trainer_material():
-    return render_template('trainer-material.html',subd=subd)
+    filesData = pandas_db('files.db','SELECT * FROM files')
+    return render_template('trainer-material.html',subd=subd,filesData=filesData)
 
 class UploadForm(Form):
     title = StringField(u'Title of material',[validators.required(),validators.Length(min=1,max=50)])
