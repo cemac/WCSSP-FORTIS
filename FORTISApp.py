@@ -133,11 +133,31 @@ def index():
             return redirect(subd+'/')
     return render_template('home.html',subd=subd)
 
+@app.route('/about')
+@is_logged_in
+def about():
+    return render_template('about.html',subd=subd)
+
+@app.route('/timetable')
+@is_logged_in
+def timetable():
+    return render_template('timetable.html',subd=subd)
+
 @app.route('/training-material')
 @is_logged_in
 def training_material():
     filesData = pandas_db('files.db','SELECT * FROM files')
     return render_template('training-material.html',subd=subd,filesData=filesData)
+
+@app.route('/partners')
+@is_logged_in
+def partners():
+    return render_template('partners.html',subd=subd)
+
+@app.route('/contact-us')
+@is_logged_in
+def contact_us():
+    return render_template('contact-us.html',subd=subd)
 
 @app.route('/trainer-material')
 @is_logged_in_as_trainer
@@ -204,6 +224,7 @@ def upload():
 
 #Download file
 @app.route('/download/<string:id>', methods=['POST'])
+@is_logged_in
 def download(id):
     filename = query_db('files.db','SELECT * FROM files WHERE id = ?',(id,),one=True)['filename']
     ext = get_ext(filename)
