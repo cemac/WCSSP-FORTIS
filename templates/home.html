@@ -1,9 +1,6 @@
 {% extends 'layout.html' %}
 
 {% block body %}
-  <div class="jumbotron text-center">
-    <h1>FORTIS: Forecasting Training in Southeast Asia</h1>
-  </div>
   {% if session.logged_in %}
     <h2><small>You are currently logged in as</small> {{ session.username }}</h2>
     <h4>You can view the training material <a href={{subd}}/training-material>here</a></h4>
