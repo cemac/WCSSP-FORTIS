@@ -1,11 +1,18 @@
 {% extends 'layout.html' %}
-
+{% block styles %}
+<style>
+img {
+    width: 100%;
+    height: auto;
+}
+</style>
+{% endblock %}
 {% block body %}
   {% if session.logged_in %}
     <h2><small>You are currently logged in as</small> {{ session.username }}</h2>
     <h4>You can view the training material <a href={{subd}}/training-material>here</a></h4>
   {% else %}
-   <h2>Please log in</h2>
+    <h2>Please log in to access the training material</h2>
     <form action="" method="POST">
       <div class="form-group">
         <label>Username</label>
@@ -19,4 +26,8 @@
     </form>
   {% endif %}
   <br>
+{% endblock %}
+{% block body2 %}
+  <img src="{{subd}}/static/Hector_cloud_from_Gunn_Point.jpg" alt="Developing convection over the Tiwi Islands, Australia">
+  <p style="text-align: right;">Developing convection over the TiwiIslands, Australia. Photo by Djambalawafor Wikimedia commons</p>
 {% endblock %}

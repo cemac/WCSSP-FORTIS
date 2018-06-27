@@ -134,7 +134,6 @@ def index():
     return render_template('home.html',subd=subd)
 
 @app.route('/about')
-@is_logged_in
 def about():
     return render_template('about.html',subd=subd)
 
@@ -150,12 +149,10 @@ def training_material():
     return render_template('training-material.html',subd=subd,filesData=filesData)
 
 @app.route('/partners')
-@is_logged_in
 def partners():
     return render_template('partners.html',subd=subd)
 
 @app.route('/contact-us')
-@is_logged_in
 def contact_us():
     return render_template('contact-us.html',subd=subd)
 
