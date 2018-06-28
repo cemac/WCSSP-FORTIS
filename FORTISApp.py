@@ -15,9 +15,8 @@ assert os.path.exists('AppSecretKey.txt'), "Unable to locate app secret key"
 with open('AppSecretKey.txt','r') as f:
     key=f.read()
 app.secret_key=key
-assert os.path.exists('users.db'), "Unable to locate users.db database"
-assert os.path.exists('files.db'), "Unable to locate files.db database"
-assert os.path.exists('workshops.db'), "Unable to locate workshops.db database"
+DATABASE = 'FORTIS.db'
+assert os.path.exists(DATABASE), "Unable to locate database"
 
 #Set subdomain...
 #If running locally (or index is the domain) set to blank, i.e. subd=""
@@ -28,44 +27,39 @@ assert os.path.exists('workshops.db'), "Unable to locate workshops.db database"
 #
 subd=""
 
-#Connect to DB for query
-def get_db(DBname):
+def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect(DBname)
+        db = g._database = sqlite3.connect(DATABASE)
         db.row_factory = sqlite3.Row
     return db
 
-#Close DB if app stops
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()
 
-#Query DB
-def query_db(DBname,query,args=(),one=False):
-    cur = get_db(DBname).execute(query, args)
+def query_db(query, args=(), one=False):
+    cur = get_db().execute(query, args)
     rv = cur.fetchall()
     cur.close()
     return (rv[0] if rv else None) if one else (rv if rv else None)
 
 #Query DB pandas
-def pandas_db(DBname,query):
-    db = get_db(DBname)
+def pandas_db(query):
+    db = get_db()
     df = pd.read_sql_query(query,db)
-    db.close()
     return df
 
 #Insert entry into DB and return the row id
-def insert_db(DBname,query,args=()):
-    conn = sqlite3.connect(DBname)
-    cur = conn.cursor()
-    cur.execute(query,args)
-    conn.commit()
+def insert_db(query,args=()):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(query, args)
+    db.commit()
     id = cur.lastrowid
     cur.close()
-    conn.close()
     return id
 
 #Check if user is logged in (either as a trainer or a trainee)
@@ -92,7 +86,7 @@ def is_logged_in_as_trainer(f):
 
 #Get list of workshops from workshop DB:
 def get_workshop_list():
-    workshopDF = pandas_db('workshops.db','SELECT * FROM workshops')
+    workshopDF = pandas_db('SELECT * FROM workshops')
     workshopList=[('blank','--Please select--')]
     for w in workshopDF['workshop']:
         workshopList.append((w,w))
@@ -112,9 +106,9 @@ def index():
         #Get form fields
         username = request.form['username']
         password_candidate = request.form['password']
-        result = query_db('users.db', 'SELECT * FROM users WHERE username = ?', [username])
+        result = query_db('SELECT * FROM users WHERE username = ?', [username])
         if result is not None:
-            data = query_db('users.db', 'SELECT * FROM users WHERE username = ?', [username], one=True)
+            data = query_db('SELECT * FROM users WHERE username = ?', [username], one=True)
             password = data['password']
             usertype = data['usertype']
             #Compare passwords
@@ -145,7 +139,7 @@ def timetable():
 @app.route('/training-material')
 @is_logged_in
 def training_material():
-    filesData = pandas_db('files.db','SELECT * FROM files')
+    filesData = pandas_db('SELECT * FROM files')
     return render_template('training-material.html',subd=subd,filesData=filesData)
 
 @app.route('/partners')
@@ -159,7 +153,7 @@ def contact_us():
 @app.route('/trainer-material')
 @is_logged_in_as_trainer
 def trainer_material():
-    filesData = pandas_db('files.db','SELECT * FROM files')
+    filesData = pandas_db('SELECT * FROM files')
     return render_template('trainer-material.html',subd=subd,filesData=filesData)
 
 class UploadForm(Form):
@@ -209,7 +203,14 @@ def upload():
         type = form.type.data
         who = form.who.data
         #Insert into files database:
-        id = insert_db('files.db',"INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
+        db.commit()
+        id = cur.lastrowid
+        cur.close()
+
+        #id = insert_db("INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
         #Upload file, calling it <id>.<ext>:
         ext = get_ext(filename)
         newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext))
@@ -223,7 +224,7 @@ def upload():
 @app.route('/download/<string:id>', methods=['POST'])
 @is_logged_in
 def download(id):
-    filename = query_db('files.db','SELECT * FROM files WHERE id = ?',(id,),one=True)['filename']
+    filename = query_db('SELECT * FROM files WHERE id = ?',(id,),one=True)['filename']
     ext = get_ext(filename)
     filepath = os.path.join(UPLOAD_FOLDER,id+ext)
     if os.path.exists(filepath):

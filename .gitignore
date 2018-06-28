@@ -1,7 +1,5 @@
 users.csv
-users.db
-files.db
-workshops.db
+FORTIS.db*
 .directory
 AppSecretKey.txt
 Uploads/
