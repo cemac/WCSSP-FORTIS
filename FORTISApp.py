@@ -255,6 +255,52 @@ def upload():
     #If user just navigates to page
     return render_template('upload.html',subd=subd,form=form)
 
+
+@app.route('/edit/<string:id>', methods=["POST"])
+@is_logged_in_as_trainer
+def edit(id):
+    if 'edit' in request.form:
+        result = query_db('SELECT * FROM files WHERE id = ?',(id,),one=True)
+        form = UploadForm()
+        form.workshop.choices = get_workshop_list()
+        form.title.data = result['title']
+        form.description.data = result['description']
+        form.workshop.data = result['workshop']
+        form.type.data = result['type']
+        form.who.data = result['who']
+        return render_template('edit.html',subd=subd,form=form,id=id)
+    else:
+        form = UploadForm(request.form)
+        form.workshop.choices = get_workshop_list()
+        if form.validate():
+            flash('File edits successful', 'success')
+            return redirect(subd+'/')
+        else:
+            flash('Invalid option selected, please try again', 'danger')
+            return redirect(subd+'/')
+        # #Get file name
+        # newfile = request.files['file']
+        # #No selected file
+        # if newfile.filename == '':
+        #     flash('No file selected','danger')
+        #     return redirect(subd+'/upload')
+        # #Get fields from web-form
+        # filename = secure_filename(newfile.filename)
+        # title = form.title.data
+        # description = form.description.data
+        # workshop = form.workshop.data
+        # type = form.type.data
+        # who = form.who.data
+        # #Insert into files database:
+        # id = insert_db("INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
+        # #Upload file, calling it <id>.<ext>:
+        # ext = get_ext(filename)
+        # newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext))
+        # #flash success message and reload page
+        # flash('File uploaded successfully', 'success')
+        # return redirect(subd+'/upload')
+    #If user just navigates to page
+
 #Download file
 @app.route('/download-file/<string:id>', methods=['POST'])
 @is_logged_in
