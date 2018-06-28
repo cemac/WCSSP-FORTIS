@@ -8,13 +8,14 @@ sqlite3 FORTIS.db <<EOF
 .out files.csv
 select * from files;
 EOF
-else
-touch files.csv
-fi
-
-
 #Make a backup copy of entire database:
 mv -f FORTIS.db FORTIS.db.old
+
+else
+
+touch files.csv
+
+fi
 
 #Now create database again and read in csv files:
 sqlite3 FORTIS.db <<EOF

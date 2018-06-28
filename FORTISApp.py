@@ -140,7 +140,9 @@ def timetable():
 @is_logged_in
 def training_material():
     filesData = pandas_db('SELECT * FROM files')
-    return render_template('training-material.html',subd=subd,filesData=filesData)
+    workshopDF = pandas_db('SELECT * FROM workshops')
+    workshopList = workshopDF['workshop'].values.tolist()
+    return render_template('material.html',subd=subd,filesData=filesData,workshopList=workshopList,who='trainees')
 
 @app.route('/partners')
 def partners():
@@ -154,7 +156,9 @@ def contact_us():
 @is_logged_in_as_trainer
 def trainer_material():
     filesData = pandas_db('SELECT * FROM files')
-    return render_template('trainer-material.html',subd=subd,filesData=filesData)
+    workshopDF = pandas_db('SELECT * FROM workshops')
+    workshopList = workshopDF['workshop'].values.tolist()
+    return render_template('material.html',subd=subd,filesData=filesData,workshopList=workshopList,who='trainers')
 
 class UploadForm(Form):
     title = StringField(u'Title of material',[validators.required(),validators.Length(min=1,max=50)])
@@ -203,14 +207,7 @@ def upload():
         type = form.type.data
         who = form.who.data
         #Insert into files database:
-        db = get_db()
-        cur = db.cursor()
-        cur.execute("INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
-        db.commit()
-        id = cur.lastrowid
-        cur.close()
-
-        #id = insert_db("INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
+        id = insert_db("INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
         #Upload file, calling it <id>.<ext>:
         ext = get_ext(filename)
         newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext))
