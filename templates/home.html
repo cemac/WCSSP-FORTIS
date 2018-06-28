@@ -1,33 +1,46 @@
 {% extends 'layout.html' %}
 {% block styles %}
 <style>
-img {
-    width: 100%;
-    height: auto;
+body,html {
+  height: 100%;
+  margin: 0;
+}
+/* img {
+  width: 100%;
+  height: auto;
+} */
+.bgimg {
+  background-image: url("{{subd}}/static/Hector_cloud_from_Gunn_Point.jpg");
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 </style>
 {% endblock %}
 {% block body %}
   {% if session.logged_in %}
-    <h2><small>You are currently logged in as</small> {{ session.username }}</h2>
-    <h4>You can view the training material <a href={{subd}}/training-material>here</a></h4>
+    <h2 style="color: white;">
+      You are currently logged in as <b>{{ session.username }}</b>.
+      You can view the training material <a href={{subd}}/training-material>here</a>
+    </h2>
   {% else %}
-    <h2>Please log in to access the training material</h2>
+    <h2 style="color: white;">Please log in to access the training material</h2>
+    <br>
     <form action="" method="POST">
       <div class="form-group">
-        <label>Username</label>
-        <input type="text" name="username" class="form-control" value={{ request.form.username }}>
+        <input type="text" name="username" class="form-control" placeholder="Username" value={{ request.form.username }}>
       </div>
+      <br>
       <div class="form-group">
-        <label>Password</label>
-        <input type="password" name="password" class="form-control" value={{ request.form.password }}>
+        <input type="password" name="password" class="form-control" placeholder="Password" value={{ request.form.password }}>
       </div>
+      <br>
       <button type="submit" class="btn btn-primary">Submit</button>
     </form>
   {% endif %}
   <br>
 {% endblock %}
 {% block body2 %}
-  <img src="{{subd}}/static/Hector_cloud_from_Gunn_Point.jpg" alt="Developing convection over the Tiwi Islands, Australia">
+  <!-- <img src="{{subd}}/static/Hector_cloud_from_Gunn_Point.jpg" alt="Developing convection over the Tiwi Islands, Australia"> -->
   <p style="text-align: right;">Developing convection over the Tiwi Islands, Australia. Photo by Djambalawa for Wikimedia commons</p>
 {% endblock %}
