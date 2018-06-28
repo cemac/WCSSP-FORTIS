@@ -1,0 +1,43 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+
+<h1>Timetables</h1>
+<hr>
+
+<table class="table table-striped">
+  <tr>
+    <th>Workshop</th>
+    <th>Timetable</th>
+  </tr>
+  {% for index, row in timetablesData.iterrows() %}
+    <tr>
+      <td>{{row['workshop']}}</td>
+      <td>
+        <form action={{subd}}/download-timetable/{{row['id']}} method="post">
+          <span class="glyphicon glyphicon-file" aria-hidden="true"></span>
+          <a href="#" onclick="this.parentNode.submit()">Click to download</a>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+</table>
+
+{% if session.logged_in and session.usertype == 'trainer' %}
+  <hr>
+  <h2>Upload new timetable</h2>
+  {% from "includes/_formhelpers.html" import render_field %}
+  <form id="timetable-form" action={{subd}}/timetables method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="chooseFile">Note: This will overwrite any previously-uploaded timetable for the selected workshop</label>
+      <input type="file" name="file" class="form-control-file" id="chooseFile" autofocus>
+    </div>
+    <div class="form-group">
+      {{render_field(form.workshop, class_="form-control")}}
+    </div>
+    <button class="btn btn-primary" type="submit">Upload timetable</button>
+  </form>
+
+{% endif %}
+
+{% endblock %}

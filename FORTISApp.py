@@ -62,6 +62,15 @@ def insert_db(query,args=()):
     cur.close()
     return id
 
+#Delete entry from DB
+def delete_db(query,args=()):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(query, args)
+    db.commit()
+    cur.close()
+    return
+
 #Check if user is logged in (either as a trainer or a trainee)
 def is_logged_in(f):
     @wraps(f)
@@ -131,10 +140,40 @@ def index():
 def about():
     return render_template('about.html',subd=subd)
 
-@app.route('/timetable')
+class TimetableForm(Form):
+    workshop = SelectField(u'Select the workshop that this timetable is for',\
+        [validators.NoneOf(('blank'),message='Please select')])
+
+@app.route('/timetables', methods=["GET","POST"])
 @is_logged_in
-def timetable():
-    return render_template('timetable.html',subd=subd)
+def timetables():
+    form = TimetableForm(request.form)
+    form.workshop.choices = get_workshop_list()
+    timetablesData = pandas_db('SELECT * FROM timetables')
+    #If user tries to upload a timetable
+    if request.method == 'POST' and form.validate():
+        #Get file name
+        newfile = request.files['file']
+        #No selected file
+        if newfile.filename == '':
+            flash('No file selected','danger')
+            return redirect(subd+'/timetables')
+        #Get fields from web-form
+        filename = secure_filename(newfile.filename)
+        workshop = form.workshop.data
+        #Delete old timetable from database if it exists:
+        result = query_db('SELECT * FROM timetables WHERE workshop = ?',(workshop,))
+        if result is not None:
+            delete_db("DELETE FROM timetables WHERE workshop = ?",(workshop,))
+        #Insert new timetable into database:
+        id = insert_db("INSERT INTO timetables(filename,workshop) VALUES(?,?)",(filename,workshop))
+        #Upload file, calling it <id>_timetable.<ext>:
+        ext = get_ext(filename)
+        newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+'_timetable'+ext))
+        #flash success message and reload page
+        flash('Timetable uploaded successfully', 'success')
+        return redirect(subd+'/timetables')
+    return render_template('timetables.html',subd=subd,form=form,timetablesData=timetablesData)
 
 @app.route('/training-material')
 @is_logged_in
@@ -168,7 +207,6 @@ class UploadForm(Form):
     type = SelectField('Select the type of material you are uploading',\
         [validators.NoneOf(('blank'),message='Please select')],\
         choices=[('blank','--Please select--'),
-        ('schedule', 'Workshop schedule'),\
         ('lectures1', 'Lectures (Day 1)'),\
         ('lectures2', 'Lectures (Day 2)'),\
         ('lectures3', 'Lectures (Day 3)'),\
@@ -226,6 +264,18 @@ def download(id):
     filepath = os.path.join(UPLOAD_FOLDER,id+ext)
     if os.path.exists(filepath):
         return send_from_directory(UPLOAD_FOLDER,id+ext,as_attachment=True,attachment_filename=filename)
+    else:
+        abort(404)
+
+#Download timetable
+@app.route('/download-timetable/<string:id>', methods=['POST'])
+@is_logged_in
+def download_timetable(id):
+    filename = query_db('SELECT * FROM timetables WHERE id = ?',(id,),one=True)['filename']
+    ext = get_ext(filename)
+    filepath = os.path.join(UPLOAD_FOLDER,id+'_timetable'+ext)
+    if os.path.exists(filepath):
+        return send_from_directory(UPLOAD_FOLDER,id+'_timetable'+ext,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
 
