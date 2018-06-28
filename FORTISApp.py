@@ -256,9 +256,9 @@ def upload():
     return render_template('upload.html',subd=subd,form=form)
 
 #Download file
-@app.route('/download/<string:id>', methods=['POST'])
+@app.route('/download-file/<string:id>', methods=['POST'])
 @is_logged_in
-def download(id):
+def download_file(id):
     filename = query_db('SELECT * FROM files WHERE id = ?',(id,),one=True)['filename']
     ext = get_ext(filename)
     filepath = os.path.join(UPLOAD_FOLDER,id+ext)
@@ -278,6 +278,22 @@ def download_timetable(id):
         return send_from_directory(UPLOAD_FOLDER,id+'_timetable'+ext,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
+
+#Delete file
+@app.route('/delete-file/<string:id>', methods=['POST'])
+@is_logged_in_as_trainer
+def delete_file(id):
+    delete_db("DELETE FROM files WHERE id = ?",(id,))
+    flash('File deleted', 'success')
+    return redirect(subd+'/')
+
+#Delete timetable
+@app.route('/delete-timetable/<string:id>', methods=['POST'])
+@is_logged_in_as_trainer
+def delete_timetable(id):
+    delete_db("DELETE FROM timetables WHERE id = ?",(id,))
+    flash('Timetable deleted', 'success')
+    return redirect(subd+'/')
 
 #Logout
 @app.route('/logout')

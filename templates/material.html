@@ -32,11 +32,17 @@
                         {% set subData3 = subData2.loc[subData1['type']==type+iday|string] %}
                         {% for index, row in subData3.iterrows() %}
                           <h4>
-                            <form action={{subd}}/download/{{row['id']}} method="post">
+                            <form action={{subd}}/download-file/{{row['id']}} method="post">
                               <span class="glyphicon glyphicon-file" aria-hidden="true"></span>
                               <a href="#" onclick="this.parentNode.submit()">{{row['title']}}</a>
                             </form>
                           </h4>
+                          {% if session.usertype == 'trainer' %}
+                            <form action={{subd}}/delete-file/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
+                              <input type="hidden" name="_method" value="DELETE">
+                              <input type="submit" value="Delete" class="btn btn-danger">
+                            </form>
+                          {% endif %}
                           <p style="font-size:18px">{{row['description']}}</p>
                           {% if loop.index != subData3|length %}
                             <hr style="height:2px" />
@@ -61,11 +67,17 @@
               {% set subData4 = subData2.loc[subData1['type']=='other'] %}
               {% for index, row in subData4.iterrows() %}
                 <h4>
-                  <form action={{subd}}/download/{{row['id']}} method="post">
+                  <form action={{subd}}/download-file/{{row['id']}} method="post">
                     <span class="glyphicon glyphicon-file" aria-hidden="true"></span>
                     <a href="#" onclick="this.parentNode.submit()">{{row['title']}}</a>
                   </form>
                 </h4>
+                {% if session.usertype == 'trainer' %}
+                  <form action={{subd}}/delete-file/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <input type="submit" value="Delete" class="btn btn-danger">
+                  </form>
+                {% endif %}
                 <p style="font-size:18px">{{row['description']}}</p>
                 {% if loop.index != subData4|length %}
                   <hr style="height:2px" />

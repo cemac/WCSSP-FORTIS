@@ -9,6 +9,7 @@
   <tr>
     <th>Workshop</th>
     <th>Timetable</th>
+    <th></th>
   </tr>
   {% for index, row in timetablesData.iterrows() %}
     <tr>
@@ -19,11 +20,19 @@
           <a href="#" onclick="this.parentNode.submit()">Click to download</a>
         </form>
       </td>
+      <td>
+        {% if session.usertype == 'trainer' %}
+          <form action={{subd}}/delete-timetable/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
+            <input type="hidden" name="_method" value="DELETE">
+            <input type="submit" value="Delete" class="btn btn-danger">
+          </form>
+        {% endif %}
+      </td>
     </tr>
   {% endfor %}
 </table>
 
-{% if session.logged_in and session.usertype == 'trainer' %}
+{% if session.usertype == 'trainer' %}
   <hr>
   <h2>Upload new timetable</h2>
   {% from "includes/_formhelpers.html" import render_field %}
@@ -37,7 +46,6 @@
     </div>
     <button class="btn btn-primary" type="submit">Upload timetable</button>
   </form>
-
 {% endif %}
 
 {% endblock %}
