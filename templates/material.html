@@ -29,7 +29,6 @@
                   </div>
                   <div id="collapseW{{Wloop}}D{{iday}}T{{Tloop}}" class="panel-collapse collapse">
                     <div class="panel-body">
-                      <!-- <p>Files are listed below:</p> -->
                         {% set subData3 = subData2.loc[subData1['type']==type+iday|string] %}
                         {% for index, row in subData3.iterrows() %}
                           <h4>
@@ -51,6 +50,30 @@
           </div>
         </div>
         {% endfor %}
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h4 class="panel-title">
+              <a data-toggle="collapse" href="#collapseW{{Wloop}}D0">Other</a>
+            </h4>
+          </div>
+          <div id="collapseW{{Wloop}}D0" class="panel-collapse collapse">
+            <div class="panel-body">
+              {% set subData4 = subData2.loc[subData1['type']=='other'] %}
+              {% for index, row in subData4.iterrows() %}
+                <h4>
+                  <form action={{subd}}/download/{{row['id']}} method="post">
+                    <span class="glyphicon glyphicon-file" aria-hidden="true"></span>
+                    <a href="#" onclick="this.parentNode.submit()">{{row['title']}}</a>
+                  </form>
+                </h4>
+                <p style="font-size:18px">{{row['description']}}</p>
+                {% if loop.index != subData4|length %}
+                  <hr style="height:2px" />
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
       </div>
       <hr>
       <br>
