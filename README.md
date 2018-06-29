@@ -1,11 +1,8 @@
-Before running this web app, ensure the sqlite3 database FORTIS.db is present. If it isn't,
-ensure users.csv (not version controlled) is present and build the sqlite3 database using:
+Before running this web app, ensure the sqlite3 database FORTIS.db is present. If it isn't, make a new one using:
 $ ./updateFORTISDB.sh
 (The above command relies on sqlite3 being installed)
-This script can also be run to update the existing database if more workshops/users are added
 
-Note that in order for the app to run successfully, the file AppSecretKey.txt must also
-be present in the app's root directory (not version-controlled)
+Note that in order for the app to run, the environment variables APP_SECRET_KEY and ADMIN_PWD must also be set.
 
 To run the app in development mode (on localhost), do the following:
 - In FORTISApp.py, change the subdomain variable (subd) near the top of the script from "/WSCCP-FORTIS" to "" (i.e. an empty string)
