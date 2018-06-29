@@ -1,0 +1,48 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+  <h1>Register a new trainee account</h1>
+  <hr>
+  {% from "includes/_formhelpers.html" import render_field %}
+  <form method="POST" action="">
+    <div class="form-group">
+      {{render_field(form.username, class_="form-control", placeholder="trainee-XX")}}
+      <br>
+      {{render_field(form.password, class_="form-control", placeholder="********")}}
+      <p>Use <a href="https://www.random.org/passwords/?num=1&len=8&format=html&rnd=new" target="_blank">this link</a> to generate a random 8-character password containing uppercase, lowercase and numbers</p>
+    </div>
+    <p><input type="submit" class="btn btn-primary" value="Submit"></p>
+  </form>
+  <hr>
+  <br>
+  <h1>List of current trainee accounts</h1>
+  <hr>
+  <table class="table table-striped">
+    <tr>
+      <th>Username</th>
+      <th>Password</th>
+      <th></th>
+    </tr>
+    {% for index, row in usersData.iterrows() %}
+      {% if row['usertype']=='trainee' %}
+        {% set pwd = row['password'] %}
+        <tr>
+          <td>{{row['username']}}</td>
+          <td><button onclick="reveal({{index}},'{{pwd}}')">Show</button></td>
+          <td><div id="Index{{index}}"></div></td>
+        </tr>
+      {% endif %}
+    {% endfor %}
+  </table>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function reveal(index,pwd) {
+    var x = document.getElementById("Index"+index);
+    x.innerHTML = pwd;
+}
+</script>
+
+{% endblock %}

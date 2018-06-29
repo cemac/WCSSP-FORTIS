@@ -254,6 +254,32 @@ def upload():
     #If user just navigates to page
     return render_template('upload.html',subd=subd,form=form)
 
+#Register form class
+class RegisterForm(Form):
+    username = StringField('Username',
+        [validators.Regexp('trainee-[0-9][0-9]',
+        message='Username must be of the form trainee-XX where XX is a two-digit number')])
+    password = StringField('Password',
+        [validators.Regexp('[A-Za-z0-9]{8}',
+        message='Passwords must be 8 characters long and contain only uppercase, lowercase and numbers')])
+
+@app.route('/trainee-accounts', methods=["GET","POST"])
+@is_logged_in_as_trainer
+def trainee_accounts():
+    usersData = pandas_db('SELECT * FROM users')
+    form = RegisterForm(request.form)
+    if request.method == 'POST' and form.validate():
+        username = form.username.data
+        #Check username is unique
+        result = query_db('SELECT * FROM users WHERE username = ?', [username])
+        if result is not None:
+            flash('Username already exists', 'danger')
+            return redirect(subd+'/trainee-accounts')
+        password = form.password.data
+        id = insert_db("INSERT INTO users(usertype,username,password) VALUES(?,?,?)",('trainee',username,password))
+        flash('Trainee account added', 'success')
+        return redirect(subd+'/trainee-accounts')
+    return render_template('trainee-accounts.html',subd=subd,form=form,usersData=usersData)
 
 @app.route('/edit/<string:id>', methods=["POST"])
 @is_logged_in_as_trainer
@@ -299,28 +325,6 @@ def edit(id):
         else:
             flash('Invalid option selected, please try to edit the file again', 'danger')
             return redirect(subd+'/')
-        # #Get file name
-        # newfile = request.files['file']
-        # #No selected file
-        # if newfile.filename == '':
-        #     flash('No file selected','danger')
-        #     return redirect(subd+'/upload')
-        # #Get fields from web-form
-        # filename = secure_filename(newfile.filename)
-        # title = form.title.data
-        # description = form.description.data
-        # workshop = form.workshop.data
-        # type = form.type.data
-        # who = form.who.data
-        # #Insert into files database:
-        # id = insert_db("INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
-        # #Upload file, calling it <id>.<ext>:
-        # ext = get_ext(filename)
-        # newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext))
-        # #flash success message and reload page
-        # flash('File uploaded successfully', 'success')
-        # return redirect(subd+'/upload')
-    #If user just navigates to page
 
 #Download file
 @app.route('/download-file/<string:id>', methods=['POST'])
