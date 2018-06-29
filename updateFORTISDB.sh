@@ -7,7 +7,7 @@ sqlite3 FORTIS.db <<EOF
 .mode csv
 .out files.csv
 select * from files;
-.out timtables.csv
+.out timetables.csv
 select * from timetables;
 EOF
 #Make a backup copy of entire database:

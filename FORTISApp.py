@@ -232,11 +232,10 @@ def upload():
     #If user tries to upload a file
     if request.method == 'POST' and form.validate():
         #Get file name
-        newfile = request.files['file']
-        #No selected file
-        if newfile.filename == '':
+        if 'file' not in request.files:
             flash('No file selected','danger')
             return redirect(subd+'/upload')
+        newfile = request.files['file']
         #Get fields from web-form
         filename = secure_filename(newfile.filename)
         title = form.title.data
@@ -259,8 +258,8 @@ def upload():
 @app.route('/edit/<string:id>', methods=["POST"])
 @is_logged_in_as_trainer
 def edit(id):
+    result = query_db('SELECT * FROM files WHERE id = ?',(id,),one=True)
     if 'edit' in request.form:
-        result = query_db('SELECT * FROM files WHERE id = ?',(id,),one=True)
         form = UploadForm()
         form.workshop.choices = get_workshop_list()
         form.title.data = result['title']
@@ -272,11 +271,33 @@ def edit(id):
     else:
         form = UploadForm(request.form)
         form.workshop.choices = get_workshop_list()
+        oldfile = result['filename']
         if form.validate():
+            #Get form info:
+            if 'file' not in request.files:
+                filename = oldfile
+            else:
+                newfile = request.files['file']
+                filename = secure_filename(newfile.filename)
+                #Delete old file:
+                ext = get_ext(oldfile)
+                oldpath=os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext)
+                if os.path.exists(oldpath):
+                    os.remove(oldpath)
+                #Upload new file:
+                ext = get_ext(filename)
+                newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext))
+            title = form.title.data
+            description = form.description.data
+            workshop = form.workshop.data
+            type = form.type.data
+            who = form.who.data
+            #Update DB:
+            id = insert_db("UPDATE files SET filename=?, title=?, description=?, workshop=?, type=?, who=? WHERE id=?",(filename,title,description,workshop,type,who,int(id)))
             flash('File edits successful', 'success')
             return redirect(subd+'/')
         else:
-            flash('Invalid option selected, please try again', 'danger')
+            flash('Invalid option selected, please try to edit the file again', 'danger')
             return redirect(subd+'/')
         # #Get file name
         # newfile = request.files['file']

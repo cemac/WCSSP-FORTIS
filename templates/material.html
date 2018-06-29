@@ -38,7 +38,10 @@
                             </form>
                           </h4>
                           {% if session.usertype == 'trainer' %}
-                            <form action={{subd}}/delete-file/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
+                            <form action={{subd}}/edit/{{row['id']}} method="post" style="display:inline;">
+                              <input type="submit" name="edit" value="Edit" class="btn btn-primary">
+                            </form>
+                            <form action={{subd}}/delete-file/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');" style="display:inline;">
                               <input type="hidden" name="_method" value="DELETE">
                               <input type="submit" value="Delete" class="btn btn-danger">
                             </form>
