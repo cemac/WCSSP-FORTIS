@@ -37,7 +37,7 @@
                               <a href="#" onclick="this.parentNode.submit()">{{row['title']}}</a>
                             </form>
                           </h4>
-                          {% if session.usertype == 'trainer' %}
+                          {% if session.usertype == 'trainer' or 'admin' %}
                             <form action={{subd}}/edit/{{row['id']}} method="post" style="display:inline;">
                               <input type="submit" name="edit" value="Edit" class="btn btn-primary">
                             </form>
@@ -75,7 +75,7 @@
                     <a href="#" onclick="this.parentNode.submit()">{{row['title']}}</a>
                   </form>
                 </h4>
-                {% if session.usertype == 'trainer' %}
+                {% if session.usertype == 'trainer' or 'admin' %}
                   <form action={{subd}}/edit/{{row['id']}} method="post" style="display:inline;">
                     <input type="submit" name="edit" value="Edit" class="btn btn-primary">
                   </form>

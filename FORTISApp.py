@@ -84,7 +84,7 @@ def delete_db(query,args=()):
     cur.close()
     return
 
-#Check if user is logged in (either as a trainer or a trainee)
+#Check if user is logged in
 def is_logged_in(f):
     @wraps(f)
     def wrap(*args, **kwargs):
@@ -95,14 +95,25 @@ def is_logged_in(f):
             return redirect(subd+'/')
     return wrap
 
-#Check if user is logged in as a trainer
+#Check if user is logged in as a trainer/admin
 def is_logged_in_as_trainer(f):
     @wraps(f)
     def wrap(*args, **kwargs):
-        if 'logged_in' in session and session['usertype']=='trainer':
+        if 'logged_in' in session and (session['usertype']=='trainer' or 'admin'):
             return f(*args, **kwargs)
         else:
-            flash('Unauthorised, please login as a trainer', 'danger')
+            flash('Unauthorised, please login as a trainer/admin', 'danger')
+            return redirect(subd+'/')
+    return wrap
+
+#Check if user is logged in as admin
+def is_logged_in_as_admin(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if 'logged_in' in session and session['usertype']=='admin':
+            return f(*args, **kwargs)
+        else:
+            flash('Unauthorised, please login as admin', 'danger')
             return redirect(subd+'/')
     return wrap
 
@@ -165,7 +176,7 @@ def index():
                 #Passed
                 session['logged_in'] = True
                 session['username'] = username
-                session['usertype'] = 'trainer'
+                session['usertype'] = 'admin'
                 flash('You are now logged in', 'success')
                 return redirect(subd+'/')
             else:
@@ -319,6 +330,33 @@ def trainee_accounts():
         flash('Trainee account added', 'success')
         return redirect(subd+'/trainee-accounts')
     return render_template('trainee-accounts.html',subd=subd,form=form,usersData=usersData)
+
+class RegisterTrainerForm(Form):
+    username = StringField('Username',[validators.Length(min=4, max=25)])
+    password = StringField('Password',
+        [validators.Regexp('[A-Za-z0-9]{8}',
+        message='Passwords must be 8 characters long and contain only uppercase, lowercase and numbers')])
+
+@app.route('/trainer-accounts', methods=["GET","POST"])
+@is_logged_in_as_admin
+def trainer_accounts():
+    usersData = pandas_db('SELECT * FROM trainers')
+    form = RegisterTrainerForm(request.form)
+    if request.method == 'POST' and form.validate():
+        username = form.username.data
+        #Check username is unique
+        result = query_db('SELECT * FROM trainers WHERE username = ?', [username],one=True)
+        if result is not None:
+            flash('Username already exists', 'danger')
+            return redirect(subd+'/trainer-accounts')
+        if username == 'admin' or username.startswith('trainee'):
+            flash('Username not allowed', 'danger')
+            return redirect(subd+'/trainer-accounts')
+        password = form.password.data
+        id = insert_db("INSERT INTO trainers(username,password) VALUES(?,?)",(username,password))
+        flash('Trainer account added', 'success')
+        return redirect(subd+'/trainer-accounts')
+    return render_template('trainer-accounts.html',subd=subd,form=form,usersData=usersData)
 
 class ChangePwdForm(Form):
     current = PasswordField('Current password',

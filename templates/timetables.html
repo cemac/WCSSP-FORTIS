@@ -21,7 +21,7 @@
         </form>
       </td>
       <td>
-        {% if session.usertype == 'trainer' %}
+        {% if session.usertype == 'trainer' or 'admin' %}
           <form action={{subd}}/delete-timetable/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
             <input type="hidden" name="_method" value="DELETE">
             <input type="submit" value="Delete" class="btn btn-danger">
@@ -32,7 +32,7 @@
   {% endfor %}
 </table>
 
-{% if session.usertype == 'trainer' %}
+{% if session.usertype == 'trainer' or 'admin' %}
   <hr>
   <h2>Upload new timetable</h2>
   {% from "includes/_formhelpers.html" import render_field %}

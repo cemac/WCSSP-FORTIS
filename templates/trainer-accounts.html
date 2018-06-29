@@ -1,0 +1,35 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+  <h1>Register a new trainer account</h1>
+  <hr>
+  {% from "includes/_formhelpers.html" import render_field %}
+  <form method="POST" action="">
+    <div class="form-group">
+      {{render_field(form.username, class_="form-control")}}
+      <br>
+      {{render_field(form.password, class_="form-control", placeholder="********")}}
+      <p>
+        Use <a href="https://www.random.org/passwords/?num=1&len=8&format=html&rnd=new" target="_blank">this link</a> to set a temporary password.
+        Send this and the username to the trainer in an email and tell them to log in and reset their password to something of their choice using
+        the 'Change password' tab (under 'Account').
+      </p>
+    </div>
+    <p><input type="submit" class="btn btn-primary" value="Submit"></p>
+  </form>
+  <hr>
+  <br>
+  <h1>List of current trainer accounts</h1>
+  <hr>
+  <table class="table table-striped">
+    <tr>
+      <th>Username</th>
+    </tr>
+    {% for index, row in usersData.iterrows() %}
+      <tr>
+        <td>{{row['username']}}</td>
+      </tr>
+    {% endfor %}
+  </table>
+
+{% endblock %}

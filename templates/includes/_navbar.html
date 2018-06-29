@@ -7,7 +7,7 @@
       {% if session.logged_in  %}
         <ul class="nav navbar-nav">
           <li><a href={{subd}}/timetables>Timetables</a></li>
-          {% if session.usertype=="trainer" %}
+          {% if session.usertype == "trainer" or "admin" %}
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Training material<span class="caret"></span></a>
               <ul class="dropdown-menu">
@@ -26,12 +26,18 @@
         <li><a href={{subd}}/partners>Partners</a></li>
         <li><a href={{subd}}/contact-us>Contact us</a></li>
         {% if session.logged_in %}
-          {% if session.usertype=="trainer" %}
+          {% if session.usertype == "trainer" or "admin" %}
             <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{session.username}}<span class="caret"></span></a>
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Account<span class="caret"></span></a>
               <ul class="dropdown-menu">
-                <li><a href={{subd}}/change-pwd>Change password</a></li>
+                <li class="dropdown-header">Logged in as <b>{{session.username}}</b></li>
+                {% if session.usertype == "trainer" %}
+                  <li><a href={{subd}}/change-pwd>Change password</a></li>
+                {% endif %}
                 <li><a href={{subd}}/trainee-accounts>View/add trainee accounts</a></li>
+                {% if session.usertype == "admin" %}
+                  <li><a href={{subd}}/trainer-accounts>View/add trainer accounts</a></li>
+                {% endif %}
                 <li><a href={{subd}}/logout>Logout</a></li>
               </ul>
             </li>
