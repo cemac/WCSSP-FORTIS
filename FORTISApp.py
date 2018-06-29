@@ -124,25 +124,39 @@ def index():
         #Get form fields
         username = request.form['username']
         password_candidate = request.form['password']
-        result = query_db('SELECT * FROM users WHERE username = ?', [username])
+        #Check trainee accounts first:
+        result = query_db('SELECT * FROM trainees WHERE username = ?', [username],one=True)
         if result is not None:
-            data = query_db('SELECT * FROM users WHERE username = ?', [username], one=True)
-            password = data['password']
-            usertype = data['usertype']
+            password = result['password']
             #Compare passwords
             if password_candidate == password:
                 #Passed
                 session['logged_in'] = True
                 session['username'] = username
-                session['usertype'] = usertype
+                session['usertype'] = 'trainee'
                 flash('You are now logged in', 'success')
                 return redirect(subd+'/')
             else:
                 flash('Incorrect password', 'danger')
                 return redirect(subd+'/')
-        else:
-            flash('Username not found', 'danger')
-            return redirect(subd+'/')
+        #Check trainer accounts next:
+        result = query_db('SELECT * FROM trainers WHERE username = ?', [username],one=True)
+        if result is not None:
+            password = result['password']
+            #Compare passwords
+            if password_candidate == password:
+                #Passed
+                session['logged_in'] = True
+                session['username'] = username
+                session['usertype'] = 'trainer'
+                flash('You are now logged in', 'success')
+                return redirect(subd+'/')
+            else:
+                flash('Incorrect password', 'danger')
+                return redirect(subd+'/')
+        #Not in either user table:
+        flash('Username not found', 'danger')
+        return redirect(subd+'/')
     return render_template('home.html',subd=subd)
 
 @app.route('/about')
@@ -171,7 +185,7 @@ def timetables():
         filename = secure_filename(newfile.filename)
         workshop = form.workshop.data
         #Delete old timetable from database if it exists:
-        result = query_db('SELECT * FROM timetables WHERE workshop = ?',(workshop,))
+        result = query_db('SELECT * FROM timetables WHERE workshop = ?',(workshop,),one=True)
         if result is not None:
             delete_db("DELETE FROM timetables WHERE workshop = ?",(workshop,))
         #Insert new timetable into database:
@@ -274,17 +288,17 @@ class RegisterForm(Form):
 @app.route('/trainee-accounts', methods=["GET","POST"])
 @is_logged_in_as_trainer
 def trainee_accounts():
-    usersData = pandas_db('SELECT * FROM users')
+    usersData = pandas_db('SELECT * FROM trainees')
     form = RegisterForm(request.form)
     if request.method == 'POST' and form.validate():
         username = form.username.data
         #Check username is unique
-        result = query_db('SELECT * FROM users WHERE username = ?', [username])
+        result = query_db('SELECT * FROM trainees WHERE username = ?', [username],one=True)
         if result is not None:
             flash('Username already exists', 'danger')
             return redirect(subd+'/trainee-accounts')
         password = form.password.data
-        id = insert_db("INSERT INTO users(usertype,username,password) VALUES(?,?,?)",('trainee',username,password))
+        id = insert_db("INSERT INTO trainees(username,password) VALUES(?,?)",(username,password))
         flash('Trainee account added', 'success')
         return redirect(subd+'/trainee-accounts')
     return render_template('trainee-accounts.html',subd=subd,form=form,usersData=usersData)
@@ -303,13 +317,13 @@ class ChangePwdForm(Form):
 def change_pwd():
     form = ChangePwdForm(request.form)
     if request.method == 'POST' and form.validate():
-        user = query_db('SELECT * FROM users WHERE username = ?',(session['username'],),one=True)
+        user = query_db('SELECT * FROM trainers WHERE username = ?',(session['username'],),one=True)
         current = form.current.data
         if current != user['password']:
             flash('Current password did not match', 'danger')
             return redirect(subd+'/change-pwd')
         new = form.new.data
-        update_db("UPDATE users SET password=? WHERE username=?",(new,session['username']))
+        update_db("UPDATE trainers SET password=? WHERE username=?",(new,session['username']))
         flash('Password changed', 'success')
         return redirect(subd+'/change-pwd')
     return render_template('change-pwd.html',subd=subd,form=form)

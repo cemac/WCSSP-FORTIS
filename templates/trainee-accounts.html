@@ -24,14 +24,12 @@
       <th></th>
     </tr>
     {% for index, row in usersData.iterrows() %}
-      {% if row['usertype']=='trainee' %}
-        {% set pwd = row['password'] %}
-        <tr>
-          <td>{{row['username']}}</td>
-          <td><button onclick="reveal({{index}},'{{pwd}}')">Show</button></td>
-          <td><div id="Index{{index}}"></div></td>
-        </tr>
-      {% endif %}
+      {% set pwd = row['password'] %}
+      <tr>
+        <td>{{row['username']}}</td>
+        <td><button onclick="reveal({{index}},'{{pwd}}')">Show</button></td>
+        <td><div id="Index{{index}}"></div></td>
+      </tr>
     {% endfor %}
   </table>
 
