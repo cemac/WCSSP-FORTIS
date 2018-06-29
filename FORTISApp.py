@@ -1,5 +1,5 @@
 from flask import Flask, render_template, flash, redirect, url_for, request, g, session, abort, send_from_directory
-from wtforms import Form, validators, StringField, TextAreaField, SelectField
+from wtforms import Form, validators, StringField, TextAreaField, SelectField, PasswordField
 from werkzeug.utils import secure_filename
 import sqlite3
 from functools import wraps
@@ -61,6 +61,15 @@ def insert_db(query,args=()):
     id = cur.lastrowid
     cur.close()
     return id
+
+#Update entry in DB
+def update_db(query,args=()):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(query, args)
+    db.commit()
+    cur.close()
+    return
 
 #Delete entry from DB
 def delete_db(query,args=()):
@@ -254,7 +263,6 @@ def upload():
     #If user just navigates to page
     return render_template('upload.html',subd=subd,form=form)
 
-#Register form class
 class RegisterForm(Form):
     username = StringField('Username',
         [validators.Regexp('trainee-[0-9][0-9]',
@@ -280,6 +288,31 @@ def trainee_accounts():
         flash('Trainee account added', 'success')
         return redirect(subd+'/trainee-accounts')
     return render_template('trainee-accounts.html',subd=subd,form=form,usersData=usersData)
+
+class ChangePwdForm(Form):
+    current = PasswordField('Current password',
+        [validators.DataRequired()])
+    new = PasswordField('New password',
+        [validators.DataRequired()])
+    confirm = PasswordField('Confirm new password',
+        [validators.DataRequired(),
+        validators.EqualTo('new', message='Passwords do no match')])
+
+@app.route('/change-pwd', methods=["GET","POST"])
+@is_logged_in_as_trainer
+def change_pwd():
+    form = ChangePwdForm(request.form)
+    if request.method == 'POST' and form.validate():
+        user = query_db('SELECT * FROM users WHERE username = ?',(session['username'],),one=True)
+        current = form.current.data
+        if current != user['password']:
+            flash('Current password did not match', 'danger')
+            return redirect(subd+'/change-pwd')
+        new = form.new.data
+        update_db("UPDATE users SET password=? WHERE username=?",(new,session['username']))
+        flash('Password changed', 'success')
+        return redirect(subd+'/change-pwd')
+    return render_template('change-pwd.html',subd=subd,form=form)
 
 @app.route('/edit/<string:id>', methods=["POST"])
 @is_logged_in_as_trainer
@@ -319,7 +352,7 @@ def edit(id):
             type = form.type.data
             who = form.who.data
             #Update DB:
-            id = insert_db("UPDATE files SET filename=?, title=?, description=?, workshop=?, type=?, who=? WHERE id=?",(filename,title,description,workshop,type,who,int(id)))
+            update_db("UPDATE files SET filename=?, title=?, description=?, workshop=?, type=?, who=? WHERE id=?",(filename,title,description,workshop,type,who,int(id)))
             flash('File edits successful', 'success')
             return redirect(subd+'/')
         else:
