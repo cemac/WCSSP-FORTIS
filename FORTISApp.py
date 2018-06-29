@@ -7,14 +7,18 @@ import os
 import pandas as pd
 
 app = Flask(__name__)
+#Configure uploads folder:
 UPLOAD_FOLDER = 'Uploads'
 if not os.path.isdir(UPLOAD_FOLDER):
     os.mkdir(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-assert os.path.exists('AppSecretKey.txt'), "Unable to locate app secret key"
-with open('AppSecretKey.txt','r') as f:
-    key=f.read()
-app.secret_key=key
+#Configure admin account:
+assert 'ADMIN_PWD' in os.environ, "ADMIN_PWD environment variable not set"
+app.config['ADMIN_PWD'] = os.environ['ADMIN_PWD']
+#Configure app secret key:
+assert 'APP_SECRET_KEY' in os.environ, "APP_SECRET_KEY environment variable not set"
+app.secret_key = os.environ['APP_SECRET_KEY']
+#Configure database:
 DATABASE = 'FORTIS.db'
 assert os.path.exists(DATABASE), "Unable to locate database"
 
@@ -154,7 +158,20 @@ def index():
             else:
                 flash('Incorrect password', 'danger')
                 return redirect(subd+'/')
-        #Not in either user table:
+        #Finally check admin account:
+        if username == 'admin':
+            password = app.config['ADMIN_PWD']
+            if password_candidate == password:
+                #Passed
+                session['logged_in'] = True
+                session['username'] = username
+                session['usertype'] = 'trainer'
+                flash('You are now logged in', 'success')
+                return redirect(subd+'/')
+            else:
+                flash('Incorrect password', 'danger')
+                return redirect(subd+'/')
+        #Username not found:
         flash('Username not found', 'danger')
         return redirect(subd+'/')
     return render_template('home.html',subd=subd)

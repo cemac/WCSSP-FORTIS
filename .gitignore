@@ -1,4 +1,4 @@
+.env
 FORTIS.db*
 .directory
-AppSecretKey.txt
 Uploads/
