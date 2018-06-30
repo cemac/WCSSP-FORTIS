@@ -474,7 +474,23 @@ def delete_file(id):
 def delete_timetable(id):
     delete_db("DELETE FROM timetables WHERE id = ?",(id,))
     flash('Timetable deleted', 'success')
-    return redirect(subd+'/')
+    return redirect(subd+'/timetables')
+
+#Delete trainee
+@app.route('/delete-trainee/<string:id>', methods=['POST'])
+@is_logged_in_as_admin
+def delete_trainee(id):
+    delete_db("DELETE FROM trainees WHERE id = ?",(id,))
+    flash('Trainee account deleted', 'success')
+    return redirect(subd+'/trainee-accounts')
+
+#Delete trainer
+@app.route('/delete-trainer/<string:id>', methods=['POST'])
+@is_logged_in_as_admin
+def delete_trainer(id):
+    delete_db("DELETE FROM trainers WHERE id = ?",(id,))
+    flash('Trainer account deleted', 'success')
+    return redirect(subd+'/trainer-accounts')
 
 #Logout
 @app.route('/logout')
