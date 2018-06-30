@@ -310,8 +310,8 @@ class RegisterForm(Form):
         [validators.Regexp('trainee-[0-9][0-9]',
         message='Username must be of the form trainee-XX where XX is a two-digit number')])
     password = StringField('Password',
-        [validators.Regexp('[A-Za-z0-9]{8}',
-        message='Passwords must be 8 characters long and contain only uppercase, lowercase and numbers')])
+        [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
+        message='Password requirements: Minimum eight characters, at least one uppercase letter, one lowercase letter and one number')])
 
 @app.route('/trainee-accounts', methods=["GET","POST"])
 @is_logged_in_as_trainer
@@ -333,7 +333,7 @@ def trainee_accounts():
 
 class RegisterTrainerForm(Form):
     username = StringField('Username',[validators.Length(min=4, max=25)])
-    password = StringField('Password',
+    password = PasswordField('Password',
         [validators.Regexp('[A-Za-z0-9]{8}',
         message='Passwords must be 8 characters long and contain only uppercase, lowercase and numbers')])
 
@@ -362,10 +362,10 @@ class ChangePwdForm(Form):
     current = PasswordField('Current password',
         [validators.DataRequired()])
     new = PasswordField('New password',
-        [validators.DataRequired()])
+        [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
+        message='Password requirements: Minimum eight characters, at least one uppercase letter, one lowercase letter and one number')])
     confirm = PasswordField('Confirm new password',
-        [validators.DataRequired(),
-        validators.EqualTo('new', message='Passwords do no match')])
+        [validators.EqualTo('new', message='Passwords do no match')])
 
 @app.route('/change-pwd', methods=["GET","POST"])
 @is_logged_in_as_trainer
