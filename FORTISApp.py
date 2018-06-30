@@ -391,6 +391,18 @@ def change_pwd():
             return redirect(subd+'/change-pwd')
     return render_template('change-pwd.html',subd=subd,form=form)
 
+@app.route('/workshops', methods=["GET","POST"])
+@is_logged_in_as_admin
+def workshops():
+    workshopsData = pandas_db('SELECT * FROM workshops')
+    if request.method == 'POST':
+        workshop = request.form['workshop']
+        print(workshop)
+        id = insert_db("INSERT INTO workshops(workshop) VALUES(?)",(workshop,))
+        flash('Workshop added', 'success')
+        return redirect(subd+'/workshops')
+    return render_template('workshops.html',subd=subd,workshopsData=workshopsData)
+
 @app.route('/edit/<string:id>', methods=["POST"])
 @is_logged_in_as_trainer
 def edit(id):
@@ -491,6 +503,14 @@ def delete_trainer(id):
     delete_db("DELETE FROM trainers WHERE id = ?",(id,))
     flash('Trainer account deleted', 'success')
     return redirect(subd+'/trainer-accounts')
+
+#Delete workshop
+@app.route('/delete-workshop/<string:id>', methods=['POST'])
+@is_logged_in_as_admin
+def delete_workshop(id):
+    delete_db("DELETE FROM workshops WHERE id = ?",(id,))
+    flash('Workshop deleted', 'success')
+    return redirect(subd+'/workshops')
 
 #Logout
 @app.route('/logout')

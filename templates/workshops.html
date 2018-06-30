@@ -1,0 +1,36 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+  <h1>Add a new workshop</h1>
+  <hr>
+  {% from "includes/_formhelpers.html" import render_field %}
+  <form method="POST" action="">
+    <div class="form-group">
+      <label for="workshop">Workshop</label>
+      <input type="text" name="workshop" class="form-control" id="workshop" placeholder="e.g. 16-20 July 2018 (Met Office, Exeter, UK)" required>
+    </div>
+    <p><input type="submit" class="btn btn-primary" value="Submit"></p>
+  </form>
+  <hr>
+  <br>
+  <h1>List of current workshops</h1>
+  <hr>
+  <table class="table table-striped">
+    <tr>
+      <th>Workshop</th>
+      <th></th>
+    </tr>
+    {% for index, row in workshopsData.iterrows() %}
+      <tr>
+        <td>{{row['workshop']}}</td>
+        <td>
+          <form action={{subd}}/delete-workshop/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
+            <input type="hidden" name="_method" value="DELETE">
+            <input type="submit" value="Delete" class="btn btn-danger">
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+
+{% endblock %}
