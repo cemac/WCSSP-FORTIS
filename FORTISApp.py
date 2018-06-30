@@ -213,12 +213,13 @@ def timetables():
         #Get fields from web-form
         filename = secure_filename(newfile.filename)
         workshop = form.workshop.data
+        author = session['username']
         #Delete old timetable from database if it exists:
         result = query_db('SELECT * FROM timetables WHERE workshop = ?',(workshop,),one=True)
         if result is not None:
             delete_db("DELETE FROM timetables WHERE workshop = ?",(workshop,))
         #Insert new timetable into database:
-        id = insert_db("INSERT INTO timetables(filename,workshop) VALUES(?,?)",(filename,workshop))
+        id = insert_db("INSERT INTO timetables(filename,workshop,author) VALUES(?,?,?)",(filename,workshop,author))
         #Upload file, calling it <id>_timetable.<ext>:
         ext = get_ext(filename)
         newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+'_timetable'+ext))
@@ -311,7 +312,7 @@ class RegisterForm(Form):
     username = StringField('Username',
         [validators.Regexp('^trainee-[0-9]{2}$',
         message='Username must be of the form trainee-XX where XX is a two-digit number')])
-    password = StringField('Password',
+    password = PasswordField('Password',
         [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
         message='Password requirements: Minimum eight characters; contains only uppercase letters, \
         lowercase letters and numbers; at least one of each type.')])
@@ -336,7 +337,7 @@ def trainee_accounts():
 
 class RegisterTrainerForm(Form):
     username = StringField('Username',[validators.Length(min=4, max=25)])
-    password = StringField('Password',
+    password = PasswordField('Password',
         [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
         message='Password requirements: Minimum eight characters; contains only uppercase letters, \
         lowercase letters and numbers; at least one of each type.')])
