@@ -100,7 +100,7 @@ def is_logged_in(f):
 def is_logged_in_as_trainer(f):
     @wraps(f)
     def wrap(*args, **kwargs):
-        if 'logged_in' in session and (session['usertype']=='trainer' or 'admin'):
+        if 'logged_in' in session and (session['usertype']=='trainer' or session['usertype']=='admin'):
             return f(*args, **kwargs)
         else:
             flash('Unauthorised, please login as a trainer/admin', 'danger')
@@ -176,7 +176,7 @@ def index():
             if password_candidate == password:
                 #Passed
                 session['logged_in'] = True
-                session['username'] = username
+                session['username'] = 'admin'
                 session['usertype'] = 'admin'
                 flash('You are now logged in', 'success')
                 return redirect(subd+'/')
@@ -295,8 +295,9 @@ def upload():
         workshop = form.workshop.data
         type = form.type.data
         who = form.who.data
+        author = session['username']
         #Insert into files database:
-        id = insert_db("INSERT INTO files(filename,title,description,workshop,type,who) VALUES(?,?,?,?,?,?)",(filename,title,description,workshop,type,who))
+        id = insert_db("INSERT INTO files(filename,title,description,workshop,type,who,author) VALUES(?,?,?,?,?,?,?)",(filename,title,description,workshop,type,who,author))
         #Upload file, calling it <id>.<ext>:
         ext = get_ext(filename)
         newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext))
