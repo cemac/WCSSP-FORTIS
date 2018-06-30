@@ -308,7 +308,7 @@ def upload():
 
 class RegisterForm(Form):
     username = StringField('Username',
-        [validators.Regexp('trainee-[0-9][0-9]',
+        [validators.Regexp('^trainee-[0-9]{2}$',
         message='Username must be of the form trainee-XX where XX is a two-digit number')])
     password = StringField('Password',
         [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
@@ -318,7 +318,7 @@ class RegisterForm(Form):
 @app.route('/trainee-accounts', methods=["GET","POST"])
 @is_logged_in_as_trainer
 def trainee_accounts():
-    usersData = pandas_db('SELECT * FROM trainees')
+    usersData = pandas_db('SELECT * FROM trainees ORDER BY username')
     form = RegisterForm(request.form)
     if request.method == 'POST' and form.validate():
         username = form.username.data

@@ -33,9 +33,10 @@
                 <li class="dropdown-header">Logged in as <b>{{session.username}}</b></li>
                 {% if session.usertype == "trainer" %}
                   <li><a href={{subd}}/change-pwd>Change password</a></li>
+                  <li><a href={{subd}}/trainee-accounts>View trainee accounts</a></li>
                 {% endif %}
-                <li><a href={{subd}}/trainee-accounts>View/add trainee accounts</a></li>
                 {% if session.usertype == "admin" %}
+                  <li><a href={{subd}}/trainee-accounts>View/add trainee accounts</a></li>
                   <li><a href={{subd}}/trainer-accounts>View/add trainer accounts</a></li>
                 {% endif %}
                 <li><a href={{subd}}/logout>Logout</a></li>

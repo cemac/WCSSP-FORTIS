@@ -1,6 +1,7 @@
 {% extends 'layout.html' %}
 
 {% block body %}
+{% if session.usertype == 'admin' %}
   <h1>Register a new trainee account</h1>
   <hr>
   {% from "includes/_formhelpers.html" import render_field %}
@@ -19,6 +20,7 @@
   </form>
   <hr>
   <br>
+{% endif %}
   <h1>List of current trainee accounts</h1>
   <hr>
   <table class="table table-striped">
