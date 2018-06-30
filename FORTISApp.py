@@ -1,6 +1,7 @@
 from flask import Flask, render_template, flash, redirect, url_for, request, g, session, abort, send_from_directory
 from wtforms import Form, validators, StringField, TextAreaField, SelectField, PasswordField
 from werkzeug.utils import secure_filename
+from passlib.hash import sha256_crypt
 import sqlite3
 from functools import wraps
 import os
@@ -140,9 +141,9 @@ def index():
         username = request.form['username']
         password_candidate = request.form['password']
         #Check trainee accounts first:
-        result = query_db('SELECT * FROM trainees WHERE username = ?', [username],one=True)
-        if result is not None:
-            password = result['password']
+        user = query_db('SELECT * FROM trainees WHERE username = ?', [username],one=True)
+        if user is not None:
+            password = user['password']
             #Compare passwords
             if password_candidate == password:
                 #Passed
@@ -155,11 +156,11 @@ def index():
                 flash('Incorrect password', 'danger')
                 return redirect(subd+'/')
         #Check trainer accounts next:
-        result = query_db('SELECT * FROM trainers WHERE username = ?', [username],one=True)
-        if result is not None:
-            password = result['password']
+        user = query_db('SELECT * FROM trainers WHERE username = ?', [username],one=True)
+        if user is not None:
+            password = user['password']
             #Compare passwords
-            if password_candidate == password:
+            if sha256_crypt.verify(password_candidate, password):
                 #Passed
                 session['logged_in'] = True
                 session['username'] = username
@@ -311,7 +312,8 @@ class RegisterForm(Form):
         message='Username must be of the form trainee-XX where XX is a two-digit number')])
     password = StringField('Password',
         [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
-        message='Password requirements: Minimum eight characters, at least one uppercase letter, one lowercase letter and one number')])
+        message='Password requirements: Minimum eight characters; contains only uppercase letters, \
+        lowercase letters and numbers; at least one of each type.')])
 
 @app.route('/trainee-accounts', methods=["GET","POST"])
 @is_logged_in_as_trainer
@@ -333,9 +335,10 @@ def trainee_accounts():
 
 class RegisterTrainerForm(Form):
     username = StringField('Username',[validators.Length(min=4, max=25)])
-    password = PasswordField('Password',
-        [validators.Regexp('[A-Za-z0-9]{8}',
-        message='Passwords must be 8 characters long and contain only uppercase, lowercase and numbers')])
+    password = StringField('Password',
+        [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
+        message='Password requirements: Minimum eight characters; contains only uppercase letters, \
+        lowercase letters and numbers; at least one of each type.')])
 
 @app.route('/trainer-accounts', methods=["GET","POST"])
 @is_logged_in_as_admin
@@ -352,7 +355,7 @@ def trainer_accounts():
         if username == 'admin' or username.startswith('trainee'):
             flash('Username not allowed', 'danger')
             return redirect(subd+'/trainer-accounts')
-        password = form.password.data
+        password = sha256_crypt.encrypt(str(form.password.data))
         id = insert_db("INSERT INTO trainers(username,password) VALUES(?,?)",(username,password))
         flash('Trainer account added', 'success')
         return redirect(subd+'/trainer-accounts')
@@ -363,7 +366,8 @@ class ChangePwdForm(Form):
         [validators.DataRequired()])
     new = PasswordField('New password',
         [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
-        message='Password requirements: Minimum eight characters, at least one uppercase letter, one lowercase letter and one number')])
+        message='Password requirements: Minimum eight characters; contains only uppercase letters, \
+        lowercase letters and numbers; at least one of each type.')])
     confirm = PasswordField('Confirm new password',
         [validators.EqualTo('new', message='Passwords do no match')])
 
@@ -373,14 +377,16 @@ def change_pwd():
     form = ChangePwdForm(request.form)
     if request.method == 'POST' and form.validate():
         user = query_db('SELECT * FROM trainers WHERE username = ?',(session['username'],),one=True)
+        password = user['password']
         current = form.current.data
-        if current != user['password']:
-            flash('Current password did not match', 'danger')
+        if sha256_crypt.verify(current, password):
+            new = sha256_crypt.encrypt(str(form.new.data))
+            update_db("UPDATE trainers SET password=? WHERE username=?",(new,session['username']))
+            flash('Password changed', 'success')
             return redirect(subd+'/change-pwd')
-        new = form.new.data
-        update_db("UPDATE trainers SET password=? WHERE username=?",(new,session['username']))
-        flash('Password changed', 'success')
-        return redirect(subd+'/change-pwd')
+        else:
+            flash('Current password incorrect', 'danger')
+            return redirect(subd+'/change-pwd')
     return render_template('change-pwd.html',subd=subd,form=form)
 
 @app.route('/edit/<string:id>', methods=["POST"])
