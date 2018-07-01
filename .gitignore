@@ -2,3 +2,4 @@
 FORTIS.db*
 .directory
 Uploads/
+__pycache__/*

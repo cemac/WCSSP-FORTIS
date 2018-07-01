@@ -8,17 +8,18 @@ import os
 import pandas as pd
 
 app = Flask(__name__)
-#Configure uploads folder:
-UPLOAD_FOLDER = 'Uploads'
-if not os.path.isdir(UPLOAD_FOLDER):
-    os.mkdir(UPLOAD_FOLDER)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-#Configure admin account:
+
+#Set config variables:
+assert "APP_SETTINGS" in os.environ, "APP_SETTINGS environment variable not set"
+assert 'SECRET_KEY' in os.environ, "APP_SECRET_KEY environment variable not set"
 assert 'ADMIN_PWD' in os.environ, "ADMIN_PWD environment variable not set"
-app.config['ADMIN_PWD'] = os.environ['ADMIN_PWD']
-#Configure app secret key:
-assert 'APP_SECRET_KEY' in os.environ, "APP_SECRET_KEY environment variable not set"
-app.secret_key = os.environ['APP_SECRET_KEY']
+assert 'UPLOAD_FOLDER' in os.environ, "UPLOAD_FOLDER environment variable not set"
+app.config.from_object(os.environ['APP_SETTINGS'])
+
+#Set up uploads folder:
+if not os.path.isdir(app.config['UPLOAD_FOLDER']):
+    os.mkdir(app.config['UPLOAD_FOLDER'])
+
 #Configure database:
 DATABASE = 'FORTIS.db'
 assert os.path.exists(DATABASE), "Unable to locate database"
