@@ -6,24 +6,23 @@ from functools import wraps
 import os
 import pandas as pd
 from flask_sqlalchemy import SQLAlchemy
+import boto3
 
 app = Flask(__name__)
 
 #Set config variables:
 assert "APP_SETTINGS" in os.environ, "APP_SETTINGS environment variable not set"
-assert 'SECRET_KEY' in os.environ, "SECRET_KEY environment variable not set"
-assert 'ADMIN_PWD' in os.environ, "ADMIN_PWD environment variable not set"
-assert 'UPLOAD_FOLDER' in os.environ, "UPLOAD_FOLDER environment variable not set"
-assert 'DATABASE_URL' in os.environ, "DATABASE_URL environment variable not set"
+assert "SECRET_KEY" in os.environ, "SECRET_KEY environment variable not set"
+assert "ADMIN_PWD" in os.environ, "ADMIN_PWD environment variable not set"
+assert "DATABASE_URL" in os.environ, "DATABASE_URL environment variable not set"
+assert "AWS_ACCESS_KEY_ID" in os.environ, "AWS_ACCESS_KEY_ID environment variable not set"
+assert "AWS_SECRET_ACCESS_KEY" in os.environ, "AWS_SECRET_ACCESS_KEY environment variable not set"
+assert "S3_BUCKET" in os.environ, "S3_BUCKET environment variable not set"
 app.config.from_object(os.environ['APP_SETTINGS'])
 
 #Configure postgresql database:
 db = SQLAlchemy(app)
 from models import Trainees, Trainers, Workshops, Files, Timetables
-
-#Set up uploads folder:
-if not os.path.isdir(app.config['UPLOAD_FOLDER']):
-    os.mkdir(app.config['UPLOAD_FOLDER'])
 
 #Set subdomain...
 #If running locally (or index is the domain) set to blank, i.e. subd=""
@@ -34,6 +33,7 @@ if not os.path.isdir(app.config['UPLOAD_FOLDER']):
 #
 subd=""
 
+########## PSQL FUNCTIONS ##########
 def psql_to_pandas(query):
     df = pd.read_sql(query.statement,db.session.bind)
     return df
@@ -47,7 +47,41 @@ def psql_delete(row):
     db.session.delete(row)
     db.session.commit()
     return
+####################################
 
+########## S3 FUNCTIONS ##########
+def upload_file_to_s3(file, filename):
+    bucket_name = app.config['S3_BUCKET']
+    s3 = boto3.client('s3','eu-west-2')
+    s3.upload_fileobj(
+        file,
+        bucket_name,
+        filename,
+        ExtraArgs={
+            "ACL": "private",
+            "ContentType": file.content_type
+        }
+    )
+    return
+
+def download_file_from_s3(filename):
+    bucket_name = app.config['S3_BUCKET']
+    s3 = boto3.resource('s3','eu-west-2')
+    s3.meta.client.download_file(
+        bucket_name,
+        filename,
+        '/tmp/'+filename
+    )
+    return
+
+def delete_file_from_s3(filename):
+    bucket_name = app.config['S3_BUCKET']
+    s3 = boto3.resource('s3','eu-west-2')
+    s3.Object(bucket_name,filename).delete()
+    return
+##################################
+
+########## LOGGED-IN FUNCTIONS ##########
 #Check if user is logged in
 def is_logged_in(f):
     @wraps(f)
@@ -80,7 +114,9 @@ def is_logged_in_as_admin(f):
             flash('Unauthorised, please login as admin', 'danger')
             return redirect(subd+'/')
     return wrap
+#########################################
 
+########## MISC FUNCTIONS ##########
 #Get list of workshops from workshop DB:
 def get_workshop_list():
     workshopDF = psql_to_pandas(Workshops.query)
@@ -89,12 +125,75 @@ def get_workshop_list():
         workshopList.append((w,w))
     return workshopList
 
+#Get filename extension
 def get_ext(filename):
     if '.' in filename:
         ext = '.' + filename.rsplit('.')[-1]
     else:
         ext = ''
     return ext
+####################################
+
+########## FORM CLASSES ##########
+class TimetableForm(Form):
+    workshop = SelectField(u'Select the workshop that this timetable is for',\
+        [validators.NoneOf(('blank'),message='Please select')])
+
+class UploadForm(Form):
+    title = StringField(u'Title of material',[validators.required(),validators.Length(min=1,max=50)])
+    description = TextAreaField(u'Description of material',[validators.optional(),validators.Length(max=1000)])
+    workshop = SelectField(u'Select the workshop that this material is for',\
+        [validators.NoneOf(('blank'),message='Please select')])
+    type = SelectField('Select the type of material you are uploading',\
+        [validators.NoneOf(('blank'),message='Please select')],\
+        choices=[('blank','--Please select--'),
+        ('lectures1', 'Lectures (Day 1)'),\
+        ('lectures2', 'Lectures (Day 2)'),\
+        ('lectures3', 'Lectures (Day 3)'),\
+        ('lectures4', 'Lectures (Day 4)'),\
+        ('lectures5', 'Lectures (Day 5)'),\
+        ('practicals1', 'Practicals (Day 1)'),\
+        ('practicals2', 'Practicals (Day 2)'),\
+        ('practicals3', 'Practicals (Day 3)'),\
+        ('practicals4', 'Practicals (Day 4)'),\
+        ('practicals5', 'Practicals (Day 5)'),\
+        ('other', 'Other')])
+    who = SelectField('Is the material for trainees (typically non-editable files, e.g. PDFs) or trainers (typically editable files, e.g. PPTs)',\
+        [validators.NoneOf(('blank'),message='Please select')],\
+        choices=[('blank','--Please select--'),
+        ('trainees', 'Trainees'),\
+        ('trainers', 'Trainers')])
+
+class RegisterForm(Form):
+    username = StringField('Username',
+        [validators.Regexp('^trainee-[0-9]{2}$',
+        message='Username must be of the form trainee-XX where XX is a two-digit number')])
+    password = PasswordField('Password',
+        [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
+        message='Password requirements: Minimum eight characters; contains only uppercase letters, \
+        lowercase letters and numbers; at least one of each type.')])
+
+class RegisterTrainerForm(Form):
+    username = StringField('Username',[validators.Length(min=4, max=25)])
+    password = PasswordField('Password',
+        [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
+        message='Password requirements: Minimum eight characters; contains only uppercase letters, \
+        lowercase letters and numbers; at least one of each type.')])
+
+class ChangePwdForm(Form):
+    current = PasswordField('Current password',
+        [validators.DataRequired()])
+    new = PasswordField('New password',
+        [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
+        message='Password requirements: Minimum eight characters; contains only uppercase letters, \
+        lowercase letters and numbers; at least one of each type.')])
+    confirm = PasswordField('Confirm new password',
+        [validators.EqualTo('new', message='Passwords do no match')])
+##################################
+
+#####################################
+########## START OF ROUTES ##########
+#####################################
 
 #Index
 @app.route('/', methods=["GET","POST"])
@@ -155,10 +254,6 @@ def index():
 def about():
     return render_template('about.html',subd=subd)
 
-class TimetableForm(Form):
-    workshop = SelectField(u'Select the workshop that this timetable is for',\
-        [validators.NoneOf(('blank'),message='Please select')])
-
 @app.route('/timetables', methods=["GET","POST"])
 @is_logged_in
 def timetables():
@@ -177,16 +272,29 @@ def timetables():
         filename = secure_filename(newfile.filename)
         workshop = form.workshop.data
         author = session['username']
-        #Delete old timetable from database if it exists:
+        #Delete old timetable if it exists:
         timetable = Timetables.query.filter_by(workshop=workshop).first()
         if timetable is not None:
+            old_id=timetable.id
+            old_filename=timetable.filename
+            #Delete from DB:
             psql_delete(timetable)
+            #Delete from S3 bucket:
+            filename_in_s3 = str(old_id)+'_timetable'+get_ext(old_filename)
+            try:
+                delete_file_from_s3(filename_in_s3)
+            except:
+                flash("Unable to delete timetable from S3","warning")
         #Insert new timetable into database:
         db_row = Timetables(filename=filename,workshop=workshop,author=author)
         id = psql_insert(db_row)
         #Upload file, calling it <id>_timetable.<ext>:
-        ext = get_ext(filename)
-        newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+'_timetable'+ext))
+        filename_in_s3 = str(id)+'_timetable'+get_ext(filename)
+        try:
+            upload_file_to_s3(newfile, filename_in_s3)
+        except:
+            flash("Unable to upload timetable","danger")
+            return redirect(subd+'/timetables')
         #flash success message and reload page
         flash('Timetable uploaded successfully', 'success')
         return redirect(subd+'/timetables')
@@ -216,31 +324,6 @@ def trainer_material():
     workshopList = workshopDF['workshop'].values.tolist()
     return render_template('material.html',subd=subd,filesData=filesData,workshopList=workshopList,who='trainers')
 
-class UploadForm(Form):
-    title = StringField(u'Title of material',[validators.required(),validators.Length(min=1,max=50)])
-    description = TextAreaField(u'Description of material',[validators.optional(),validators.Length(max=1000)])
-    workshop = SelectField(u'Select the workshop that this material is for',\
-        [validators.NoneOf(('blank'),message='Please select')])
-    type = SelectField('Select the type of material you are uploading',\
-        [validators.NoneOf(('blank'),message='Please select')],\
-        choices=[('blank','--Please select--'),
-        ('lectures1', 'Lectures (Day 1)'),\
-        ('lectures2', 'Lectures (Day 2)'),\
-        ('lectures3', 'Lectures (Day 3)'),\
-        ('lectures4', 'Lectures (Day 4)'),\
-        ('lectures5', 'Lectures (Day 5)'),\
-        ('practicals1', 'Practicals (Day 1)'),\
-        ('practicals2', 'Practicals (Day 2)'),\
-        ('practicals3', 'Practicals (Day 3)'),\
-        ('practicals4', 'Practicals (Day 4)'),\
-        ('practicals5', 'Practicals (Day 5)'),\
-        ('other', 'Other')])
-    who = SelectField('Is the material for trainees (typically non-editable files, e.g. PDFs) or trainers (typically editable files, e.g. PPTs)',\
-        [validators.NoneOf(('blank'),message='Please select')],\
-        choices=[('blank','--Please select--'),
-        ('trainees', 'Trainees'),\
-        ('trainers', 'Trainers')])
-
 @app.route('/upload', methods=["GET","POST"])
 @is_logged_in_as_trainer
 def upload():
@@ -265,22 +348,17 @@ def upload():
         db_row=Files(filename=filename,title=title,description=description,workshop=workshop,type=type,who=who,author=author)
         id = psql_insert(db_row)
         #Upload file, calling it <id>.<ext>:
-        ext = get_ext(filename)
-        newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext))
+        filename_in_s3 = str(id)+get_ext(filename)
+        try:
+            upload_file_to_s3(newfile, filename_in_s3)
+        except:
+            flash("Unable to upload file","danger")
+            return redirect(subd+'/upload')
         #flash success message and reload page
         flash('File uploaded successfully', 'success')
         return redirect(subd+'/upload')
     #If user just navigates to page
     return render_template('upload.html',subd=subd,form=form)
-
-class RegisterForm(Form):
-    username = StringField('Username',
-        [validators.Regexp('^trainee-[0-9]{2}$',
-        message='Username must be of the form trainee-XX where XX is a two-digit number')])
-    password = PasswordField('Password',
-        [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
-        message='Password requirements: Minimum eight characters; contains only uppercase letters, \
-        lowercase letters and numbers; at least one of each type.')])
 
 @app.route('/trainee-accounts', methods=["GET","POST"])
 @is_logged_in_as_trainer
@@ -300,13 +378,6 @@ def trainee_accounts():
         flash('Trainee account added', 'success')
         return redirect(subd+'/trainee-accounts')
     return render_template('trainee-accounts.html',subd=subd,form=form,usersData=usersData)
-
-class RegisterTrainerForm(Form):
-    username = StringField('Username',[validators.Length(min=4, max=25)])
-    password = PasswordField('Password',
-        [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
-        message='Password requirements: Minimum eight characters; contains only uppercase letters, \
-        lowercase letters and numbers; at least one of each type.')])
 
 @app.route('/trainer-accounts', methods=["GET","POST"])
 @is_logged_in_as_admin
@@ -329,16 +400,6 @@ def trainer_accounts():
         flash('Trainer account added', 'success')
         return redirect(subd+'/trainer-accounts')
     return render_template('trainer-accounts.html',subd=subd,form=form,usersData=usersData)
-
-class ChangePwdForm(Form):
-    current = PasswordField('Current password',
-        [validators.DataRequired()])
-    new = PasswordField('New password',
-        [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
-        message='Password requirements: Minimum eight characters; contains only uppercase letters, \
-        lowercase letters and numbers; at least one of each type.')])
-    confirm = PasswordField('Confirm new password',
-        [validators.EqualTo('new', message='Passwords do no match')])
 
 @app.route('/change-pwd', methods=["GET","POST"])
 @is_logged_in_as_trainer
@@ -396,14 +457,19 @@ def edit(id):
             else:
                 newfile = request.files['file']
                 filename = secure_filename(newfile.filename)
-                #Delete old file:
-                ext = get_ext(oldfile)
-                oldpath=os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext)
-                if os.path.exists(oldpath):
-                    os.remove(oldpath)
-                #Upload new file:
-                ext = get_ext(filename)
-                newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext))
+                #Delete old file from S3 bucket:
+                filename_in_s3 = str(id)+get_ext(oldfile)
+                try:
+                    delete_file_from_s3(filename_in_s3)
+                except:
+                    flash("Unable to delete old file from S3","warning")
+                #Upload new file, calling it <id>.<ext>:
+                filename_in_s3 = str(id)+get_ext(filename)
+                try:
+                    upload_file_to_s3(newfile, filename_in_s3)
+                except:
+                    flash("Unable to upload new file","danger")
+                    return redirect(subd+'/')
             title = form.title.data
             description = form.description.data
             workshop = form.workshop.data
@@ -431,10 +497,17 @@ def download_file(id):
     if result is None:
         abort(404)
     filename = result.filename
-    ext = get_ext(filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'],id+ext)
-    if os.path.exists(filepath):
-        return send_from_directory(app.config['UPLOAD_FOLDER'],id+ext,as_attachment=True,attachment_filename=filename)
+    filename_in_s3 = str(id)+get_ext(filename)
+    #Try to download the file from S3 bucket to /tmp if it's not already there:
+    if not os.path.exists('/tmp/'+filename_in_s3):
+        try:
+            download_file_from_s3(filename_in_s3)
+        except:
+            flash("Unable to download file","danger")
+            return redirect(subd+'/timetables')
+    #Serve the file to the client:
+    if os.path.exists('/tmp/'+filename_in_s3):
+        return send_from_directory('/tmp',filename_in_s3,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
 
@@ -446,10 +519,17 @@ def download_timetable(id):
     if result is None:
         abort(404)
     filename = result.filename
-    ext = get_ext(filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'],id+'_timetable'+ext)
-    if os.path.exists(filepath):
-        return send_from_directory(app.config['UPLOAD_FOLDER'],id+'_timetable'+ext,as_attachment=True,attachment_filename=filename)
+    filename_in_s3 = str(id)+'_timetable'+get_ext(filename)
+    #Try to download the timetable from S3 bucket to /tmp if it's not already there:
+    if not os.path.exists('/tmp/'+filename_in_s3):
+        try:
+            download_file_from_s3(filename_in_s3)
+        except:
+            flash("Unable to download timetable","danger")
+            return redirect(subd+'/timetables')
+    #Serve the timetable to the client:
+    if os.path.exists('/tmp/'+filename_in_s3):
+        return send_from_directory('/tmp',filename_in_s3,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
 
@@ -460,8 +540,16 @@ def delete_file(id):
     result = Files.query.filter_by(id=id).first()
     if result is None:
         abort(404)
+    filename = result.filename
+    #Delete from DB:
     psql_delete(result)
-    flash('File deleted', 'success')
+    #Delete from S3 bucket:
+    filename_in_s3 = str(id)+get_ext(filename)
+    try:
+        delete_file_from_s3(filename_in_s3)
+    except:
+        flash("Unable to delete file from S3","warning")
+    flash("File deleted","success")
     return redirect(subd+'/')
 
 #Delete timetable
@@ -471,8 +559,16 @@ def delete_timetable(id):
     result = Timetables.query.filter_by(id=id).first()
     if result is None:
         abort(404)
+    filename = result.filename
+    #Delete from DB:
     psql_delete(result)
-    flash('Timetable deleted', 'success')
+    #Delete from S3 bucket:
+    filename_in_s3 = str(id)+'_timetable'+get_ext(filename)
+    try:
+        delete_file_from_s3(filename_in_s3)
+    except:
+        flash("Unable to delete timetable from S3","warning")
+    flash("Timetable deleted","success")
     return redirect(subd+'/timetables')
 
 #Delete trainee

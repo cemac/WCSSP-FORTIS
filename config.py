@@ -6,9 +6,9 @@ class Config(object):
     CSRF_ENABLED = True
     SECRET_KEY = os.environ['SECRET_KEY']
     ADMIN_PWD = os.environ['ADMIN_PWD']
-    UPLOAD_FOLDER = os.environ['UPLOAD_FOLDER']
     SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    S3_BUCKET = os.environ['S3_BUCKET']
 
 class ProductionConfig(Config):
     DEBUG = False
