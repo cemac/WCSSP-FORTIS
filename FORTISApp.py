@@ -6,6 +6,7 @@ import sqlite3
 from functools import wraps
 import os
 import pandas as pd
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
@@ -14,13 +15,18 @@ assert "APP_SETTINGS" in os.environ, "APP_SETTINGS environment variable not set"
 assert 'SECRET_KEY' in os.environ, "APP_SECRET_KEY environment variable not set"
 assert 'ADMIN_PWD' in os.environ, "ADMIN_PWD environment variable not set"
 assert 'UPLOAD_FOLDER' in os.environ, "UPLOAD_FOLDER environment variable not set"
+assert 'DATABASE_URL' in os.environ, "DATABASE_URL environment variable not set"
 app.config.from_object(os.environ['APP_SETTINGS'])
+
+#Configure postgresql database:
+db = SQLAlchemy(app)
+from models import trainees, trainers, workshops, files, timetables
 
 #Set up uploads folder:
 if not os.path.isdir(app.config['UPLOAD_FOLDER']):
     os.mkdir(app.config['UPLOAD_FOLDER'])
 
-#Configure database:
+#Configure  sqlite3 database:
 DATABASE = 'FORTIS.db'
 assert os.path.exists(DATABASE), "Unable to locate database"
 

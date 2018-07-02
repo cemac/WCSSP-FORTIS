@@ -7,6 +7,8 @@ class Config(object):
     SECRET_KEY = os.environ['SECRET_KEY']
     ADMIN_PWD = os.environ['ADMIN_PWD']
     UPLOAD_FOLDER = os.environ['UPLOAD_FOLDER']
+    SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 class ProductionConfig(Config):
     DEBUG = False
