@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 #Set config variables:
 assert "APP_SETTINGS" in os.environ, "APP_SETTINGS environment variable not set"
-assert 'SECRET_KEY' in os.environ, "APP_SECRET_KEY environment variable not set"
+assert 'SECRET_KEY' in os.environ, "SECRET_KEY environment variable not set"
 assert 'ADMIN_PWD' in os.environ, "ADMIN_PWD environment variable not set"
 assert 'UPLOAD_FOLDER' in os.environ, "UPLOAD_FOLDER environment variable not set"
 assert 'DATABASE_URL' in os.environ, "DATABASE_URL environment variable not set"
@@ -461,9 +461,9 @@ def edit(id):
 def download_file(id):
     filename = query_db('SELECT * FROM files WHERE id = ?',(id,),one=True)['filename']
     ext = get_ext(filename)
-    filepath = os.path.join(UPLOAD_FOLDER,id+ext)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'],id+ext)
     if os.path.exists(filepath):
-        return send_from_directory(UPLOAD_FOLDER,id+ext,as_attachment=True,attachment_filename=filename)
+        return send_from_directory(app.config['UPLOAD_FOLDER'],id+ext,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
 
@@ -473,9 +473,9 @@ def download_file(id):
 def download_timetable(id):
     filename = query_db('SELECT * FROM timetables WHERE id = ?',(id,),one=True)['filename']
     ext = get_ext(filename)
-    filepath = os.path.join(UPLOAD_FOLDER,id+'_timetable'+ext)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'],id+'_timetable'+ext)
     if os.path.exists(filepath):
-        return send_from_directory(UPLOAD_FOLDER,id+'_timetable'+ext,as_attachment=True,attachment_filename=filename)
+        return send_from_directory(app.config['UPLOAD_FOLDER'],id+'_timetable'+ext,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
 
