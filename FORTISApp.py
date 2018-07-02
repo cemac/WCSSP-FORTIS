@@ -2,7 +2,6 @@ from flask import Flask, render_template, flash, redirect, url_for, request, g, 
 from wtforms import Form, validators, StringField, TextAreaField, SelectField, PasswordField
 from werkzeug.utils import secure_filename
 from passlib.hash import sha256_crypt
-import sqlite3
 from functools import wraps
 import os
 import pandas as pd
@@ -20,15 +19,11 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 
 #Configure postgresql database:
 db = SQLAlchemy(app)
-from models import trainees, trainers, workshops, files, timetables
+from models import Trainees, Trainers, Workshops, Files, Timetables
 
 #Set up uploads folder:
 if not os.path.isdir(app.config['UPLOAD_FOLDER']):
     os.mkdir(app.config['UPLOAD_FOLDER'])
-
-#Configure  sqlite3 database:
-DATABASE = 'FORTIS.db'
-assert os.path.exists(DATABASE), "Unable to locate database"
 
 #Set subdomain...
 #If running locally (or index is the domain) set to blank, i.e. subd=""
@@ -39,57 +34,18 @@ assert os.path.exists(DATABASE), "Unable to locate database"
 #
 subd=""
 
-def get_db():
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
-        db.row_factory = sqlite3.Row
-    return db
-
-@app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
-
-def query_db(query, args=(), one=False):
-    cur = get_db().execute(query, args)
-    rv = cur.fetchall()
-    cur.close()
-    return (rv[0] if rv else None) if one else (rv if rv else None)
-
-#Query DB pandas
-def pandas_db(query):
-    db = get_db()
-    df = pd.read_sql_query(query,db)
+def psql_to_pandas(query):
+    df = pd.read_sql(query.statement,db.session.bind)
     return df
 
-#Insert entry into DB and return the row id
-def insert_db(query,args=()):
-    db = get_db()
-    cur = db.cursor()
-    cur.execute(query, args)
-    db.commit()
-    id = cur.lastrowid
-    cur.close()
-    return id
+def psql_insert(row):
+    db.session.add(row)
+    db.session.commit()
+    return row.id
 
-#Update entry in DB
-def update_db(query,args=()):
-    db = get_db()
-    cur = db.cursor()
-    cur.execute(query, args)
-    db.commit()
-    cur.close()
-    return
-
-#Delete entry from DB
-def delete_db(query,args=()):
-    db = get_db()
-    cur = db.cursor()
-    cur.execute(query, args)
-    db.commit()
-    cur.close()
+def psql_delete(row):
+    db.session.delete(row)
+    db.session.commit()
     return
 
 #Check if user is logged in
@@ -127,7 +83,7 @@ def is_logged_in_as_admin(f):
 
 #Get list of workshops from workshop DB:
 def get_workshop_list():
-    workshopDF = pandas_db('SELECT * FROM workshops')
+    workshopDF = psql_to_pandas(Workshops.query)
     workshopList=[('blank','--Please select--')]
     for w in workshopDF['workshop']:
         workshopList.append((w,w))
@@ -148,9 +104,9 @@ def index():
         username = request.form['username']
         password_candidate = request.form['password']
         #Check trainee accounts first:
-        user = query_db('SELECT * FROM trainees WHERE username = ?', [username],one=True)
+        user = Trainees.query.filter_by(username=username).first()
         if user is not None:
-            password = user['password']
+            password = user.password
             #Compare passwords
             if password_candidate == password:
                 #Passed
@@ -163,9 +119,9 @@ def index():
                 flash('Incorrect password', 'danger')
                 return redirect(subd+'/')
         #Check trainer accounts next:
-        user = query_db('SELECT * FROM trainers WHERE username = ?', [username],one=True)
+        user = Trainers.query.filter_by(username=username).first()
         if user is not None:
-            password = user['password']
+            password = user.password
             #Compare passwords
             if sha256_crypt.verify(password_candidate, password):
                 #Passed
@@ -208,7 +164,7 @@ class TimetableForm(Form):
 def timetables():
     form = TimetableForm(request.form)
     form.workshop.choices = get_workshop_list()
-    timetablesData = pandas_db('SELECT * FROM timetables')
+    timetablesData = psql_to_pandas(Timetables.query)
     #If user tries to upload a timetable
     if request.method == 'POST' and form.validate():
         #Get file name
@@ -222,11 +178,12 @@ def timetables():
         workshop = form.workshop.data
         author = session['username']
         #Delete old timetable from database if it exists:
-        result = query_db('SELECT * FROM timetables WHERE workshop = ?',(workshop,),one=True)
-        if result is not None:
-            delete_db("DELETE FROM timetables WHERE workshop = ?",(workshop,))
+        timetable = Timetables.query.filter_by(workshop=workshop).first()
+        if timetable is not None:
+            psql_delete(timetable)
         #Insert new timetable into database:
-        id = insert_db("INSERT INTO timetables(filename,workshop,author) VALUES(?,?,?)",(filename,workshop,author))
+        db_row = Timetables(filename=filename,workshop=workshop,author=author)
+        id = psql_insert(db_row)
         #Upload file, calling it <id>_timetable.<ext>:
         ext = get_ext(filename)
         newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+'_timetable'+ext))
@@ -238,8 +195,8 @@ def timetables():
 @app.route('/training-material')
 @is_logged_in
 def training_material():
-    filesData = pandas_db('SELECT * FROM files')
-    workshopDF = pandas_db('SELECT * FROM workshops')
+    filesData = psql_to_pandas(Files.query)
+    workshopDF = psql_to_pandas(Workshops.query)
     workshopList = workshopDF['workshop'].values.tolist()
     return render_template('material.html',subd=subd,filesData=filesData,workshopList=workshopList,who='trainees')
 
@@ -254,8 +211,8 @@ def contact_us():
 @app.route('/trainer-material')
 @is_logged_in_as_trainer
 def trainer_material():
-    filesData = pandas_db('SELECT * FROM files')
-    workshopDF = pandas_db('SELECT * FROM workshops')
+    filesData = psql_to_pandas(Files.query)
+    workshopDF = psql_to_pandas(Workshops.query)
     workshopList = workshopDF['workshop'].values.tolist()
     return render_template('material.html',subd=subd,filesData=filesData,workshopList=workshopList,who='trainers')
 
@@ -305,7 +262,8 @@ def upload():
         who = form.who.data
         author = session['username']
         #Insert into files database:
-        id = insert_db("INSERT INTO files(filename,title,description,workshop,type,who,author) VALUES(?,?,?,?,?,?,?)",(filename,title,description,workshop,type,who,author))
+        db_row=Files(filename=filename,title=title,description=description,workshop=workshop,type=type,who=who,author=author)
+        id = psql_insert(db_row)
         #Upload file, calling it <id>.<ext>:
         ext = get_ext(filename)
         newfile.save(os.path.join(app.config['UPLOAD_FOLDER'],str(id)+ext))
@@ -327,17 +285,18 @@ class RegisterForm(Form):
 @app.route('/trainee-accounts', methods=["GET","POST"])
 @is_logged_in_as_trainer
 def trainee_accounts():
-    usersData = pandas_db('SELECT * FROM trainees ORDER BY username')
+    usersData = psql_to_pandas(Trainees.query.order_by(Trainees.username))
     form = RegisterForm(request.form)
     if request.method == 'POST' and form.validate():
         username = form.username.data
         #Check username is unique
-        result = query_db('SELECT * FROM trainees WHERE username = ?', [username],one=True)
-        if result is not None:
+        user = Trainees.query.filter_by(username=username).first()
+        if user is not None:
             flash('Username already exists', 'danger')
             return redirect(subd+'/trainee-accounts')
         password = form.password.data
-        id = insert_db("INSERT INTO trainees(username,password) VALUES(?,?)",(username,password))
+        db_row = Trainees(username=username,password=password)
+        id = psql_insert(db_row)
         flash('Trainee account added', 'success')
         return redirect(subd+'/trainee-accounts')
     return render_template('trainee-accounts.html',subd=subd,form=form,usersData=usersData)
@@ -352,20 +311,21 @@ class RegisterTrainerForm(Form):
 @app.route('/trainer-accounts', methods=["GET","POST"])
 @is_logged_in_as_admin
 def trainer_accounts():
-    usersData = pandas_db('SELECT * FROM trainers')
+    usersData = psql_to_pandas(Trainers.query)
     form = RegisterTrainerForm(request.form)
     if request.method == 'POST' and form.validate():
         username = form.username.data
         #Check username is unique
-        result = query_db('SELECT * FROM trainers WHERE username = ?', [username],one=True)
-        if result is not None:
+        user = Trainers.query.filter_by(username=username).first()
+        if user is not None:
             flash('Username already exists', 'danger')
             return redirect(subd+'/trainer-accounts')
         if username == 'admin' or username.startswith('trainee'):
             flash('Username not allowed', 'danger')
             return redirect(subd+'/trainer-accounts')
         password = sha256_crypt.encrypt(str(form.password.data))
-        id = insert_db("INSERT INTO trainers(username,password) VALUES(?,?)",(username,password))
+        db_row = Trainers(username=username,password=password)
+        id = psql_insert(db_row)
         flash('Trainer account added', 'success')
         return redirect(subd+'/trainer-accounts')
     return render_template('trainer-accounts.html',subd=subd,form=form,usersData=usersData)
@@ -385,12 +345,12 @@ class ChangePwdForm(Form):
 def change_pwd():
     form = ChangePwdForm(request.form)
     if request.method == 'POST' and form.validate():
-        user = query_db('SELECT * FROM trainers WHERE username = ?',(session['username'],),one=True)
-        password = user['password']
+        user = Trainers.query.filter_by(username=session['username']).first()
+        password = user.password
         current = form.current.data
         if sha256_crypt.verify(current, password):
-            new = sha256_crypt.encrypt(str(form.new.data))
-            update_db("UPDATE trainers SET password=? WHERE username=?",(new,session['username']))
+            user.password = sha256_crypt.encrypt(str(form.new.data))
+            db.session.commit()
             flash('Password changed', 'success')
             return redirect(subd+'/change-pwd')
         else:
@@ -401,11 +361,11 @@ def change_pwd():
 @app.route('/workshops', methods=["GET","POST"])
 @is_logged_in_as_admin
 def workshops():
-    workshopsData = pandas_db('SELECT * FROM workshops')
+    workshopsData = psql_to_pandas(Workshops.query)
     if request.method == 'POST':
         workshop = request.form['workshop']
-        print(workshop)
-        id = insert_db("INSERT INTO workshops(workshop) VALUES(?)",(workshop,))
+        db_row = Workshops(workshop=workshop)
+        id = psql_insert(db_row)
         flash('Workshop added', 'success')
         return redirect(subd+'/workshops')
     return render_template('workshops.html',subd=subd,workshopsData=workshopsData)
@@ -413,20 +373,22 @@ def workshops():
 @app.route('/edit/<string:id>', methods=["POST"])
 @is_logged_in_as_trainer
 def edit(id):
-    result = query_db('SELECT * FROM files WHERE id = ?',(id,),one=True)
+    result = Files.query.filter_by(id=id).first()
+    if result is None:
+        abort(404)
     if 'edit' in request.form:
         form = UploadForm()
         form.workshop.choices = get_workshop_list()
-        form.title.data = result['title']
-        form.description.data = result['description']
-        form.workshop.data = result['workshop']
-        form.type.data = result['type']
-        form.who.data = result['who']
+        form.title.data = result.title
+        form.description.data = result.description
+        form.workshop.data = result.workshop
+        form.type.data = result.type
+        form.who.data = result.who
         return render_template('edit.html',subd=subd,form=form,id=id)
     else:
         form = UploadForm(request.form)
         form.workshop.choices = get_workshop_list()
-        oldfile = result['filename']
+        oldfile = result.filename
         if form.validate():
             #Get form info:
             if 'file' not in request.files:
@@ -448,7 +410,13 @@ def edit(id):
             type = form.type.data
             who = form.who.data
             #Update DB:
-            update_db("UPDATE files SET filename=?, title=?, description=?, workshop=?, type=?, who=? WHERE id=?",(filename,title,description,workshop,type,who,int(id)))
+            result.filename = filename
+            result.title = title
+            result.description = description
+            result.workshop = workshop
+            result.type = type
+            result.who = who
+            db.session.commit()
             flash('File edits successful', 'success')
             return redirect(subd+'/')
         else:
@@ -459,7 +427,10 @@ def edit(id):
 @app.route('/download-file/<string:id>', methods=['POST'])
 @is_logged_in
 def download_file(id):
-    filename = query_db('SELECT * FROM files WHERE id = ?',(id,),one=True)['filename']
+    result = Files.query.filter_by(id=id).first()
+    if result is None:
+        abort(404)
+    filename = result.filename
     ext = get_ext(filename)
     filepath = os.path.join(app.config['UPLOAD_FOLDER'],id+ext)
     if os.path.exists(filepath):
@@ -471,7 +442,10 @@ def download_file(id):
 @app.route('/download-timetable/<string:id>', methods=['POST'])
 @is_logged_in
 def download_timetable(id):
-    filename = query_db('SELECT * FROM timetables WHERE id = ?',(id,),one=True)['filename']
+    result = Timetables.query.filter_by(id=id).first()
+    if result is None:
+        abort(404)
+    filename = result.filename
     ext = get_ext(filename)
     filepath = os.path.join(app.config['UPLOAD_FOLDER'],id+'_timetable'+ext)
     if os.path.exists(filepath):
@@ -483,7 +457,10 @@ def download_timetable(id):
 @app.route('/delete-file/<string:id>', methods=['POST'])
 @is_logged_in_as_trainer
 def delete_file(id):
-    delete_db("DELETE FROM files WHERE id = ?",(id,))
+    result = Files.query.filter_by(id=id).first()
+    if result is None:
+        abort(404)
+    psql_delete(result)
     flash('File deleted', 'success')
     return redirect(subd+'/')
 
@@ -491,7 +468,10 @@ def delete_file(id):
 @app.route('/delete-timetable/<string:id>', methods=['POST'])
 @is_logged_in_as_trainer
 def delete_timetable(id):
-    delete_db("DELETE FROM timetables WHERE id = ?",(id,))
+    result = Timetables.query.filter_by(id=id).first()
+    if result is None:
+        abort(404)
+    psql_delete(result)
     flash('Timetable deleted', 'success')
     return redirect(subd+'/timetables')
 
@@ -499,7 +479,10 @@ def delete_timetable(id):
 @app.route('/delete-trainee/<string:id>', methods=['POST'])
 @is_logged_in_as_admin
 def delete_trainee(id):
-    delete_db("DELETE FROM trainees WHERE id = ?",(id,))
+    result = Trainees.query.filter_by(id=id).first()
+    if result is None:
+        abort(404)
+    psql_delete(result)
     flash('Trainee account deleted', 'success')
     return redirect(subd+'/trainee-accounts')
 
@@ -507,7 +490,10 @@ def delete_trainee(id):
 @app.route('/delete-trainer/<string:id>', methods=['POST'])
 @is_logged_in_as_admin
 def delete_trainer(id):
-    delete_db("DELETE FROM trainers WHERE id = ?",(id,))
+    result = Trainers.query.filter_by(id=id).first()
+    if result is None:
+        abort(404)
+    psql_delete(result)
     flash('Trainer account deleted', 'success')
     return redirect(subd+'/trainer-accounts')
 
@@ -515,7 +501,10 @@ def delete_trainer(id):
 @app.route('/delete-workshop/<string:id>', methods=['POST'])
 @is_logged_in_as_admin
 def delete_workshop(id):
-    delete_db("DELETE FROM workshops WHERE id = ?",(id,))
+    result = Workshops.query.filter_by(id=id).first()
+    if result is None:
+        abort(404)
+    psql_delete(result)
     flash('Workshop deleted', 'success')
     return redirect(subd+'/workshops')
 

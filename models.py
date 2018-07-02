@@ -1,6 +1,6 @@
 from FORTISApp import db
 
-class trainees(db.Model):
+class Trainees(db.Model):
     __tablename__ = 'trainees'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -14,7 +14,7 @@ class trainees(db.Model):
     def __repr__(self):
         return '<id {}>'.format(self.id)
 
-class trainers(db.Model):
+class Trainers(db.Model):
     __tablename__ = 'trainers'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -28,7 +28,7 @@ class trainers(db.Model):
     def __repr__(self):
         return '<id {}>'.format(self.id)
 
-class workshops(db.Model):
+class Workshops(db.Model):
     __tablename__ = 'workshops'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -40,7 +40,7 @@ class workshops(db.Model):
     def __repr__(self):
         return '<id {}>'.format(self.id)
 
-class files(db.Model):
+class Files(db.Model):
     __tablename__ = 'files'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -64,7 +64,7 @@ class files(db.Model):
     def __repr__(self):
         return '<id {}>'.format(self.id)
 
-class timetables(db.Model):
+class Timetables(db.Model):
     __tablename__ = 'timetables'
 
     id = db.Column(db.Integer, primary_key=True)
