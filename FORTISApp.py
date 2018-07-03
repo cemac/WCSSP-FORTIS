@@ -169,24 +169,24 @@ class RegisterForm(Form):
         [validators.Regexp('^trainee-[0-9]{2}$',
         message='Username must be of the form trainee-XX where XX is a two-digit number')])
     password = PasswordField('Password',
-        [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
-        message='Password requirements: Minimum eight characters; contains only uppercase letters, \
-        lowercase letters and numbers; at least one of each type.')])
+        [validators.Regexp('^([a-zA-Z0-9]{8,})$',
+        message='Password must be mimimum 8 characters and contain only uppercase letters, \
+        lowercase letters and numbers')])
 
 class RegisterTrainerForm(Form):
     username = StringField('Username',[validators.Length(min=4, max=25)])
     password = PasswordField('Password',
-        [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
-        message='Password requirements: Minimum eight characters; contains only uppercase letters, \
-        lowercase letters and numbers; at least one of each type.')])
+        [validators.Regexp('^([a-zA-Z0-9]{8,})$',
+        message='Password must be mimimum 8 characters and contain only uppercase letters, \
+        lowercase letters and numbers')])
 
 class ChangePwdForm(Form):
     current = PasswordField('Current password',
         [validators.DataRequired()])
     new = PasswordField('New password',
-        [validators.Regexp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$',
-        message='Password requirements: Minimum eight characters; contains only uppercase letters, \
-        lowercase letters and numbers; at least one of each type.')])
+        [validators.Regexp('^([a-zA-Z0-9]{8,})$',
+        message='Password must be mimimum 8 characters and contain only uppercase letters, \
+        lowercase letters and numbers')])
     confirm = PasswordField('Confirm new password',
         [validators.EqualTo('new', message='Passwords do no match')])
 ##################################
