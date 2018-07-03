@@ -33,9 +33,12 @@
                         {% for index, row in subData3.iterrows() %}
                           <h4>
                             <form action={{subd}}/download-file/{{row['id']}} method="post">
-                              <span class="glyphicon glyphicon-file" aria-hidden="true"></span>
-                              <a href="#" onclick="this.parentNode.submit()">{{row['title']}}</a>
+                              <a href="#" onclick="this.parentNode.submit()">
+                                <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                                {{row['title']}}
+                              </a>
                             </form>
+                            <small>Uploaded by <b>{{row['author']}}</b></small>
                           </h4>
                           {% if session.username == row['author'] or session.username == 'admin' %}
                             <form action={{subd}}/edit/{{row['id']}} method="post" style="display:inline;">
