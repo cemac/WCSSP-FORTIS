@@ -18,6 +18,10 @@ body,html {
 </style>
 {% endblock %}
 {% block body %}
+  <span style="float:right; color: white;" data-toggle="tooltip" title="Developing convection over the Tiwi Islands, Australia. Photo by Djambalawa for Wikimedia commons">
+    <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
+    Image source
+  </span>
   {% if session.logged_in %}
     <h2 style="color: white;">
       You are currently logged in as <b>{{ session.username }}</b>.
@@ -40,7 +44,10 @@ body,html {
   {% endif %}
   <br>
 {% endblock %}
-{% block body2 %}
-  <!-- <img src="{{subd}}/static/Hector_cloud_from_Gunn_Point.jpg" alt="Developing convection over the Tiwi Islands, Australia"> -->
-  <p style="text-align: right;">Developing convection over the Tiwi Islands, Australia. Photo by Djambalawa for Wikimedia commons</p>
+{% block script %}
+<script>
+$(document).ready(function(){
+    $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
 {% endblock %}
