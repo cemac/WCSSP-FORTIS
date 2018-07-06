@@ -124,14 +124,6 @@ def get_workshop_list():
     for w in workshopDF['workshop']:
         workshopList.append((w,w))
     return workshopList
-
-#Get filename extension
-def get_ext(filename):
-    if '.' in filename:
-        ext = '.' + filename.rsplit('.')[-1]
-    else:
-        ext = ''
-    return ext
 ####################################
 
 ########## FORM CLASSES ##########
@@ -280,7 +272,7 @@ def timetables():
             #Delete from DB:
             psql_delete(timetable)
             #Delete from S3 bucket:
-            filename_in_s3 = str(old_id)+'_timetable'+get_ext(old_filename)
+            filename_in_s3 = str(old_id)+'T_'+old_filename
             try:
                 delete_file_from_s3(filename_in_s3)
             except:
@@ -288,8 +280,8 @@ def timetables():
         #Insert new timetable into database:
         db_row = Timetables(filename=filename,workshop=workshop,author=author)
         id = psql_insert(db_row)
-        #Upload file, calling it <id>_timetable.<ext>:
-        filename_in_s3 = str(id)+'_timetable'+get_ext(filename)
+        #Upload file, calling it <id>T_<filename>:
+        filename_in_s3 = str(id)+'T_'+filename
         try:
             upload_file_to_s3(newfile, filename_in_s3)
         except:
@@ -347,8 +339,8 @@ def upload():
         #Insert into files database:
         db_row=Files(filename=filename,title=title,description=description,workshop=workshop,type=type,who=who,author=author)
         id = psql_insert(db_row)
-        #Upload file, calling it <id>.<ext>:
-        filename_in_s3 = str(id)+get_ext(filename)
+        #Upload file, calling it <id>F_<filename>:
+        filename_in_s3 = str(id)+'F_'+filename
         try:
             upload_file_to_s3(newfile, filename_in_s3)
         except:
@@ -458,13 +450,13 @@ def edit(id):
                 newfile = request.files['file']
                 filename = secure_filename(newfile.filename)
                 #Delete old file from S3 bucket:
-                filename_in_s3 = str(id)+get_ext(oldfile)
+                filename_in_s3 = str(id)+'F_'+oldfile
                 try:
                     delete_file_from_s3(filename_in_s3)
                 except:
                     flash("Unable to delete old file from S3","warning")
-                #Upload new file, calling it <id>.<ext>:
-                filename_in_s3 = str(id)+get_ext(filename)
+                #Upload new file, calling it <id>F_<filename>:
+                filename_in_s3 = str(id)+'F_'+filename
                 try:
                     upload_file_to_s3(newfile, filename_in_s3)
                 except:
@@ -497,7 +489,7 @@ def download_file(id):
     if result is None:
         abort(404)
     filename = result.filename
-    filename_in_s3 = str(id)+get_ext(filename)
+    filename_in_s3 = str(id)+'F_'+filename
     #Try to download the file from S3 bucket to /tmp if it's not already there:
     if not os.path.exists('/tmp/'+filename_in_s3):
         try:
@@ -519,7 +511,7 @@ def download_timetable(id):
     if result is None:
         abort(404)
     filename = result.filename
-    filename_in_s3 = str(id)+'_timetable'+get_ext(filename)
+    filename_in_s3 = str(id)+'T_'+filename
     #Try to download the timetable from S3 bucket to /tmp if it's not already there:
     if not os.path.exists('/tmp/'+filename_in_s3):
         try:
@@ -544,7 +536,7 @@ def delete_file(id):
     #Delete from DB:
     psql_delete(result)
     #Delete from S3 bucket:
-    filename_in_s3 = str(id)+get_ext(filename)
+    filename_in_s3 = str(id)+'F_'+filename
     try:
         delete_file_from_s3(filename_in_s3)
     except:
@@ -563,7 +555,7 @@ def delete_timetable(id):
     #Delete from DB:
     psql_delete(result)
     #Delete from S3 bucket:
-    filename_in_s3 = str(id)+'_timetable'+get_ext(filename)
+    filename_in_s3 = str(id)+'T_'+filename
     try:
         delete_file_from_s3(filename_in_s3)
     except:
