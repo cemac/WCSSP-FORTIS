@@ -18,10 +18,12 @@ body,html {
 </style>
 {% endblock %}
 {% block body %}
-  <span style="float:right; color: white;" data-toggle="tooltip" title="Developing convection over the Tiwi Islands, Australia. Photo by Djambalawa for Wikimedia commons">
+  <a style="float:right; color: white;" data-toggle="tooltip"
+  title="Developing convection over the Tiwi Islands, Australia. Photo by Djambalawa for Wikimedia commons"
+  href="https://commons.wikimedia.org/wiki/File:Hector_cloud_from_Gunn_Point.jpg" target="_blank">
     <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
     Image source
-  </span>
+  </a>
   {% if session.logged_in %}
     <h2 style="color: white;">
       You are currently logged in as <b>{{ session.username }}</b>.
