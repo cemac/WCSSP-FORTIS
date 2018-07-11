@@ -12,9 +12,19 @@
         You can only upload one file at a time.
         If you would like to upload a number of files with the same title, description, etc,
         (e.g. a collection of related image files for a given practical), you can zip up the
-        files first and upload the zip file. If zipping up the files on a  Linux/Unix machine,
+        files first and upload the zip file. If zipping up the files on a Linux/Unix machine,
         it is best to use 'zip' rather than e.g. 'tar' to ensure that the trainees can unzip
-        the file on Windows machines.
+        the file on Windows machines. To do this, type at the command line:
+        <span style="font-family:Courier;">$ zip my_chosen_name.zip file1 file2 file3 etc</span>,
+        or to zip a directory, type:
+        <span style="font-family:Courier;">$ zip -r my_chosen_name.zip dir1</span>.
+        To extract a zip file on Linux, type:
+        <span style="font-family:Courier;">$ unzip zip_file_name.zip</span>.
+        If zipping up the files on a Windows machine, right-click in a blank area on your desktop
+        or in explorer, go to 'New', and select "Compressed (zipped) Folder", rename the zip folder
+        as desired, and select and drag your files into the zip folder.
+        To extract a zip file on Windows, right-click on the zip file and select "Extract All..."
+        followed by "Extract".
       </p>
       <input type="file" name="file" class="form-control-file" id="chooseFile" autofocus required>
     </div>
