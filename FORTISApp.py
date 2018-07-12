@@ -272,18 +272,16 @@ def timetables():
             #Delete from DB:
             psql_delete(timetable)
             #Delete from S3 bucket:
-            filename_in_s3 = str(old_id)+'T_'+old_filename
             try:
-                delete_file_from_s3(filename_in_s3)
+                delete_file_from_s3(old_filename)
             except:
                 flash("Unable to delete timetable from S3","warning")
         #Insert new timetable into database:
         db_row = Timetables(filename=filename,workshop=workshop,author=author)
         id = psql_insert(db_row)
-        #Upload file, calling it <id>T_<filename>:
-        filename_in_s3 = str(id)+'T_'+filename
+        #Upload file
         try:
-            upload_file_to_s3(newfile, filename_in_s3)
+            upload_file_to_s3(newfile, filename)
         except:
             flash("Unable to upload timetable","danger")
             return redirect(subd+'/timetables')
@@ -339,10 +337,9 @@ def upload():
         #Insert into files database:
         db_row=Files(filename=filename,title=title,description=description,workshop=workshop,type=type,who=who,author=author)
         id = psql_insert(db_row)
-        #Upload file, calling it <id>F_<filename>:
-        filename_in_s3 = str(id)+'F_'+filename
+        #Upload file
         try:
-            upload_file_to_s3(newfile, filename_in_s3)
+            upload_file_to_s3(newfile, filename)
         except:
             flash("Unable to upload file","danger")
             return redirect(subd+'/upload')
@@ -450,15 +447,13 @@ def edit(id):
                 newfile = request.files['file']
                 filename = secure_filename(newfile.filename)
                 #Delete old file from S3 bucket:
-                filename_in_s3 = str(id)+'F_'+oldfile
                 try:
-                    delete_file_from_s3(filename_in_s3)
+                    delete_file_from_s3(oldfile)
                 except:
                     flash("Unable to delete old file from S3","warning")
-                #Upload new file, calling it <id>F_<filename>:
-                filename_in_s3 = str(id)+'F_'+filename
+                #Upload new file:
                 try:
-                    upload_file_to_s3(newfile, filename_in_s3)
+                    upload_file_to_s3(newfile, filename)
                 except:
                     flash("Unable to upload new file","danger")
                     return redirect(subd+'/')
@@ -489,17 +484,16 @@ def download_file(id):
     if result is None:
         abort(404)
     filename = result.filename
-    filename_in_s3 = str(id)+'F_'+filename
     #Try to download the file from S3 bucket to /tmp if it's not already there:
-    if not os.path.exists('/tmp/'+filename_in_s3):
+    if not os.path.exists('/tmp/'+filename):
         try:
-            download_file_from_s3(filename_in_s3)
+            download_file_from_s3(filename)
         except:
             flash("Unable to download file","danger")
             return redirect(subd+'/timetables')
     #Serve the file to the client:
-    if os.path.exists('/tmp/'+filename_in_s3):
-        return send_from_directory('/tmp',filename_in_s3,as_attachment=True,attachment_filename=filename)
+    if os.path.exists('/tmp/'+filename):
+        return send_from_directory('/tmp',filename,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
 
@@ -511,17 +505,16 @@ def download_timetable(id):
     if result is None:
         abort(404)
     filename = result.filename
-    filename_in_s3 = str(id)+'T_'+filename
     #Try to download the timetable from S3 bucket to /tmp if it's not already there:
-    if not os.path.exists('/tmp/'+filename_in_s3):
+    if not os.path.exists('/tmp/'+filename):
         try:
-            download_file_from_s3(filename_in_s3)
+            download_file_from_s3(filename)
         except:
             flash("Unable to download timetable","danger")
             return redirect(subd+'/timetables')
     #Serve the timetable to the client:
-    if os.path.exists('/tmp/'+filename_in_s3):
-        return send_from_directory('/tmp',filename_in_s3,as_attachment=True,attachment_filename=filename)
+    if os.path.exists('/tmp/'+filename):
+        return send_from_directory('/tmp',filename,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
 
@@ -536,9 +529,8 @@ def delete_file(id):
     #Delete from DB:
     psql_delete(result)
     #Delete from S3 bucket:
-    filename_in_s3 = str(id)+'F_'+filename
     try:
-        delete_file_from_s3(filename_in_s3)
+        delete_file_from_s3(filename)
     except:
         flash("Unable to delete file from S3","warning")
     flash("File deleted","success")
@@ -555,9 +547,8 @@ def delete_timetable(id):
     #Delete from DB:
     psql_delete(result)
     #Delete from S3 bucket:
-    filename_in_s3 = str(id)+'T_'+filename
     try:
-        delete_file_from_s3(filename_in_s3)
+        delete_file_from_s3(filename)
     except:
         flash("Unable to delete timetable from S3","warning")
     flash("Timetable deleted","success")
