@@ -32,12 +32,10 @@
                         {% set subData3 = subData2.loc[subData1['type']==type+iday|string] %}
                         {% for index, row in subData3.iterrows() %}
                           <h4>
-                            <form action={{subd}}/download-file/{{row['id']}} method="post">
-                              <a href="#" onclick="this.parentNode.submit()">
-                                <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                                {{row['title']}}
-                              </a>
-                            </form>
+                            <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">
+                              <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                              {{row['title']}}
+                            </a>
                             <small>Uploaded by <b>{{row['author']}}</b></small>
                           </h4>
                           {% if session.username == row['author'] or session.username == 'admin' %}
@@ -73,12 +71,10 @@
               {% set subData4 = subData2.loc[subData1['type']=='other'] %}
               {% for index, row in subData4.iterrows() %}
                 <h4>
-                  <form action={{subd}}/download-file/{{row['id']}} method="post">
-                    <a href="#" onclick="this.parentNode.submit()">
-                      <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                      {{row['title']}}
-                    </a>
-                  </form>
+                  <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">
+                    <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                    {{row['title']}}
+                  </a>
                   <small>Uploaded by <b>{{row['author']}}</b></small>
                 </h4>
                 {% if session.username == row['author'] or session.username == 'admin' %}
@@ -102,4 +98,27 @@
       <hr>
     {% endfor %}
   </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+function getSignedRequestForDownload(id){
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "/sign_s3_download_file?id="+id);
+  xhr.onreadystatechange = function(){
+    if(xhr.readyState === 4){
+      if(xhr.status === 200){
+        var response = JSON.parse(xhr.responseText);
+        window.open(response.url);
+      }
+      else{
+        alert("Could not get signed URL.");
+      }
+    }
+  };
+  xhr.send();
+}
+
+</script>
 {% endblock %}

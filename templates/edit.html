@@ -4,11 +4,7 @@
   <h1>Edit file information</h1>
   <hr>
   {% from "includes/_formhelpers.html" import render_field %}
-  <form id="edit-form" action={{subd}}/edit/{{id}} method="POST" enctype="multipart/form-data">
-    <div class="form-group">
-      <label for="chooseFile">Browse to select a different file or leave blank if you only want to change the file information</label>
-      <input type="file" name="file" class="form-control-file" id="chooseFile">
-    </div>
+  <form id="edit-form" action={{subd}}/edit/{{id}} method="POST">
     <div class="form-group">
       {{render_field(form.title, class_="form-control", placeholder="e.g.'Tropical cyclone track forecasting'. This is the name the trainees will see.")}}
       <br>

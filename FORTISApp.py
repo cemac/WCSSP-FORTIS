@@ -7,6 +7,8 @@ import os
 import pandas as pd
 from flask_sqlalchemy import SQLAlchemy
 import boto3
+from random import randint
+import json
 
 app = Flask(__name__)
 
@@ -49,8 +51,9 @@ def psql_delete(row):
     return
 ####################################
 
-########## S3 FUNCTIONS ##########
+########## S3 FUNCTIONS/ROUTES ##########
 def upload_file_to_s3(file, filename):
+    #THIS SUBROUTINE SHOULDN'T BE USED NOW - USING DIRECT UPLOAD METHOD INSTEAD
     bucket_name = app.config['S3_BUCKET']
     s3 = boto3.client('s3','eu-west-2')
     s3.upload_fileobj(
@@ -65,6 +68,7 @@ def upload_file_to_s3(file, filename):
     return
 
 def download_file_from_s3(filename):
+    #THIS SUBROUTINE SHOULDN'T BE USED NOW - USING DIRECT DOWNLOAD METHOD INSTEAD
     bucket_name = app.config['S3_BUCKET']
     s3 = boto3.resource('s3','eu-west-2')
     s3.meta.client.download_file(
@@ -79,6 +83,64 @@ def delete_file_from_s3(filename):
     s3 = boto3.resource('s3','eu-west-2')
     s3.Object(bucket_name,filename).delete()
     return
+
+@app.route('/sign_s3/')
+def sign_s3():
+    bucket_name = app.config['S3_BUCKET']
+    filename_orig = request.args.get('file_name')
+    filename_s3 = str(randint(10000,99999)) + '_' + secure_filename(filename_orig)
+    file_type = request.args.get('file_type')
+    s3 = boto3.client('s3','eu-west-2')
+    presigned_post = s3.generate_presigned_post(
+      Bucket = bucket_name,
+      Key = filename_s3,
+      Fields = {"acl": "private", "Content-Type": file_type},
+      Conditions = [
+        {"acl": "private"},
+        {"Content-Type": file_type}
+      ],
+      ExpiresIn = 3600
+    )
+    return json.dumps({
+      'data': presigned_post,
+      'url': 'https://%s.s3.eu-west-2.amazonaws.com/%s' % (bucket_name, filename_s3)
+    })
+
+@app.route('/sign_s3_download_timetable/')
+def sign_s3_download_timetable():
+    bucket_name = app.config['S3_BUCKET']
+    id = request.args.get('id')
+    # Retrieve s3 filename from DB:
+    db_entry = Timetables.query.filter_by(id=id).first()
+    filename_s3 = db_entry.filename
+    # Create and return pre-signed url:
+    s3 = boto3.client('s3','eu-west-2')
+    presigned_url = s3.generate_presigned_url(
+      'get_object',
+      Params = {'Bucket': bucket_name, 'Key': filename_s3},
+      ExpiresIn = 3600
+    )
+    return json.dumps({
+      'url': presigned_url,
+    })
+
+@app.route('/sign_s3_download_file/')
+def sign_s3_download_file():
+    bucket_name = app.config['S3_BUCKET']
+    id = request.args.get('id')
+    # Retrieve s3 filename from DB:
+    db_entry = Files.query.filter_by(id=id).first()
+    filename_s3 = db_entry.filename
+    # Create and return pre-signed url:
+    s3 = boto3.client('s3','eu-west-2')
+    presigned_url = s3.generate_presigned_url(
+      'get_object',
+      Params = {'Bucket': bucket_name, 'Key': filename_s3},
+      ExpiresIn = 3600
+    )
+    return json.dumps({
+      'url': presigned_url,
+    })
 ##################################
 
 ########## LOGGED-IN FUNCTIONS ##########
@@ -253,41 +315,36 @@ def timetables():
     form.workshop.choices = get_workshop_list()
     timetablesData = psql_to_pandas(Timetables.query)
     #If user tries to upload a timetable
-    if request.method == 'POST' and form.validate():
-        #Get file name
-        newfile = request.files['file']
-        #No selected file
-        if newfile.filename == '':
-            flash('No file selected','danger')
+    if request.method == 'POST':
+        if form.validate():
+            #Get S3 filename:
+            filename_s3 = request.form['filename_s3']
+            #Get fields from web-form
+            workshop = form.workshop.data
+            author = session['username']
+            #Delete old timetable if it exists:
+            timetable = Timetables.query.filter_by(workshop=workshop).first()
+            if timetable is not None:
+                old_filename=timetable.filename
+                #Delete from DB:
+                psql_delete(timetable)
+                #Delete from S3 bucket:
+                try:
+                    delete_file_from_s3(old_filename)
+                except:
+                    flash("Unable to delete timetable from S3","warning")
+            #Insert new timetable into database:
+            db_row = Timetables(filename=filename_s3,workshop=workshop,author=author)
+            id = psql_insert(db_row)
+            #flash success message and reload page
+            flash('Timetable uploaded successfully', 'success')
             return redirect(subd+'/timetables')
-        #Get fields from web-form
-        filename = secure_filename(newfile.filename)
-        workshop = form.workshop.data
-        author = session['username']
-        #Delete old timetable if it exists:
-        timetable = Timetables.query.filter_by(workshop=workshop).first()
-        if timetable is not None:
-            old_id=timetable.id
-            old_filename=timetable.filename
-            #Delete from DB:
-            psql_delete(timetable)
-            #Delete from S3 bucket:
-            try:
-                delete_file_from_s3(old_filename)
-            except:
-                flash("Unable to delete timetable from S3","warning")
-        #Insert new timetable into database:
-        db_row = Timetables(filename=filename,workshop=workshop,author=author)
-        id = psql_insert(db_row)
-        #Upload file
-        try:
-            upload_file_to_s3(newfile, filename)
-        except:
-            flash("Unable to upload timetable","danger")
-            return redirect(subd+'/timetables')
-        #flash success message and reload page
-        flash('Timetable uploaded successfully', 'success')
-        return redirect(subd+'/timetables')
+        else:
+            #Delete file from S3:
+            filename_s3 = request.form['filename_s3']
+            delete_file_from_s3(filename_s3)
+            #Flash error message:
+            flash('Fix form errors and try again', 'danger')
     return render_template('timetables.html',subd=subd,form=form,timetablesData=timetablesData)
 
 @app.route('/training-material')
@@ -320,32 +377,29 @@ def upload():
     form = UploadForm(request.form)
     form.workshop.choices = get_workshop_list()
     #If user tries to upload a file
-    if request.method == 'POST' and form.validate():
-        #Get file name
-        if 'file' not in request.files:
-            flash('No file selected','danger')
+    if request.method == 'POST':
+        if form.validate():
+            #Get S3 filename:
+            filename_s3 = request.form['filename_s3']
+            #Get fields from web-form
+            title = form.title.data
+            description = form.description.data
+            workshop = form.workshop.data
+            type = form.type.data
+            who = form.who.data
+            author = session['username']
+            #Insert into files database:
+            db_row=Files(filename=filename_s3,title=title,description=description,workshop=workshop,type=type,who=who,author=author)
+            id = psql_insert(db_row)
+            #flash success message and reload page
+            flash('File uploaded successfully', 'success')
             return redirect(subd+'/upload')
-        newfile = request.files['file']
-        #Get fields from web-form
-        filename = secure_filename(newfile.filename)
-        title = form.title.data
-        description = form.description.data
-        workshop = form.workshop.data
-        type = form.type.data
-        who = form.who.data
-        author = session['username']
-        #Insert into files database:
-        db_row=Files(filename=filename,title=title,description=description,workshop=workshop,type=type,who=who,author=author)
-        id = psql_insert(db_row)
-        #Upload file
-        try:
-            upload_file_to_s3(newfile, filename)
-        except:
-            flash("Unable to upload file","danger")
-            return redirect(subd+'/upload')
-        #flash success message and reload page
-        flash('File uploaded successfully', 'success')
-        return redirect(subd+'/upload')
+        else:
+            #Delete file from S3:
+            filename_s3 = request.form['filename_s3']
+            delete_file_from_s3(filename_s3)
+            #Flash error message:
+            flash('Fix form errors and try again', 'danger')
     #If user just navigates to page
     return render_template('upload.html',subd=subd,form=form)
 
@@ -438,32 +492,14 @@ def edit(id):
     else:
         form = UploadForm(request.form)
         form.workshop.choices = get_workshop_list()
-        oldfile = result.filename
         if form.validate():
             #Get form info:
-            if 'file' not in request.files:
-                filename = oldfile
-            else:
-                newfile = request.files['file']
-                filename = secure_filename(newfile.filename)
-                #Delete old file from S3 bucket:
-                try:
-                    delete_file_from_s3(oldfile)
-                except:
-                    flash("Unable to delete old file from S3","warning")
-                #Upload new file:
-                try:
-                    upload_file_to_s3(newfile, filename)
-                except:
-                    flash("Unable to upload new file","danger")
-                    return redirect(subd+'/')
             title = form.title.data
             description = form.description.data
             workshop = form.workshop.data
             type = form.type.data
             who = form.who.data
             #Update DB:
-            result.filename = filename
             result.title = title
             result.description = description
             result.workshop = workshop
@@ -478,6 +514,7 @@ def edit(id):
 
 #Download file
 @app.route('/download-file/<string:id>', methods=['POST'])
+#THIS ROUTE SHOULDN'T BE USED NOW - USING DIRECT DOWNLOAD METHOD INSTEAD
 @is_logged_in
 def download_file(id):
     result = Files.query.filter_by(id=id).first()
@@ -499,6 +536,7 @@ def download_file(id):
 
 #Download timetable
 @app.route('/download-timetable/<string:id>', methods=['POST'])
+#THIS ROUTE SHOULDN'T BE USED NOW - USING DIRECT DOWNLOAD METHOD INSTEAD
 @is_logged_in
 def download_timetable(id):
     result = Timetables.query.filter_by(id=id).first()
