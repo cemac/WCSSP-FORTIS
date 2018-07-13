@@ -493,6 +493,12 @@ def edit(id):
         form = UploadForm(request.form)
         form.workshop.choices = get_workshop_list()
         if form.validate():
+            #Get S3 filename and delete old file if not blank:
+            filename_s3 = request.form['filename_s3']
+            if not filename_s3 == "":
+                old_filename=result.filename
+                delete_file_from_s3(old_filename)
+                result.filename = filename_s3
             #Get form info:
             title = form.title.data
             description = form.description.data
@@ -509,6 +515,11 @@ def edit(id):
             flash('File edits successful', 'success')
             return redirect(subd+'/')
         else:
+            #Delete file from S3 if not blank:
+            filename_s3 = request.form['filename_s3']
+            if not filename_s3 == "":
+                delete_file_from_s3(filename_s3)
+            #Flash error message:
             flash('Invalid option selected, please try to edit the file again', 'danger')
             return redirect(subd+'/')
 
