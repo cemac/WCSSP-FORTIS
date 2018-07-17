@@ -113,6 +113,9 @@ def sign_s3_download_timetable():
     # Retrieve s3 filename from DB:
     db_entry = Timetables.query.filter_by(id=id).first()
     filename_s3 = db_entry.filename
+    #Access granting:
+    if not 'logged_in' in session:
+        abort(403)
     # Create and return pre-signed url:
     s3 = boto3.client('s3','eu-west-2')
     presigned_url = s3.generate_presigned_url(
@@ -131,6 +134,12 @@ def sign_s3_download_file():
     # Retrieve s3 filename from DB:
     db_entry = Files.query.filter_by(id=id).first()
     filename_s3 = db_entry.filename
+    #Access granting:
+    who = db_entry.who
+    if not 'logged_in' in session:
+        abort(403)
+    if who=='trainers' and session['usertype']=='trainee':
+        abort(403)
     # Create and return pre-signed url:
     s3 = boto3.client('s3','eu-west-2')
     presigned_url = s3.generate_presigned_url(
