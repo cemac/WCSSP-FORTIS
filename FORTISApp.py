@@ -26,13 +26,7 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 db = SQLAlchemy(app)
 from models import Trainees, Trainers, Workshops, Files, Timetables
 
-#Set subdomain...
-#If running locally (or index is the domain) set to blank, i.e. subd=""
-#If index is a subdomain, set as appropriate *including* leading slash, e.g. subd="/WCSSP-FORTIS"
-#Routes in @app.route() should NOT include subd, but all other references should...
-#Use redirect(subd + '/route') rather than redirect(url_for(route))
-#Pass subd=subd into every render_template so that it can be used to set the links appropriately
-#
+#Other parameters:
 subd=""
 
 ########## PSQL FUNCTIONS ##########

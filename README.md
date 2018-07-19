@@ -1,17 +1,7 @@
-Before running this web app, ensure the sqlite3 database FORTIS.db is present. If it isn't, make a new one using:
-$ ./updateFORTISDB.sh
-(The above command relies on sqlite3 being installed)
+After any required setup steps, run this app locally using:
+$ python manage.py runserver
+and go to localhost:5000 in a web browser
 
-Note that in order for the app to run, the environment variables APP_SECRET_KEY and ADMIN_PWD must also be set.
-
-To run the app in development mode (on localhost), do the following:
-- In FORTISApp.py, change the subdomain variable (subd) near the top of the script from "/WSCCP-FORTIS" to "" (i.e. an empty string)
-- In FORTISApp.py, add "debug=True" inside the parentheses in the call to app.run near the bottom of the script
-- If on the FOE system, load the appropriate python modules by typing: $ module load python3 python-libs
-- Run the application by typing: $ python3 FORTISApp.py
-- Open up a web browser and navigate to localhost:5000
-
-***Don't forget to reset subd and remove from debug mode before committing to GitHub (production mode)***
 To make changes to the GitHub repo:
 - If you are a collaborator, you can simply push local changes to the main repo
 - If you are not a collaborator, follow these instructions:
@@ -31,8 +21,5 @@ To make changes to the GitHub repo:
   - It is then good practice to delete the branch in both the remote forked repo (can be done via GitHub) and the local forked repo:
     $ git branch -d branchName
 
-To make any code changes take effect on the server, ssh into it, update the git repo, and perform a restart:
-$ ssh -Y <serverName>
-$ cd /www/<projectDir>/
-$ git pull
-$ sudo systemctl restart httpd
+To make any code changes take effect on Heroku:
+$ git push heroku master
