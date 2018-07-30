@@ -4,12 +4,19 @@
   <h1>Edit file information</h1>
   <hr>
   <p><b>Browse to select a different file or leave blank if you only want to change the file information</b></p>
-  <input type="file" id="file_input">
-  <p id="status"></p>
-  <br>
+  {% if S3_OR_DBX == 'S3' %}
+    <input type="file" id="file_input">
+    <p id="status"></p>
+    <br>
+  {% endif %}
   {% from "includes/_formhelpers.html" import render_field %}
-  <form id="edit-form" action={{subd}}/edit/{{id}} method="POST">
-    <input type="hidden" id="filename_s3" name="filename_s3" value="">
+  <form id="edit-form" action={{subd}}/edit/{{id}}/{{S3_OR_DBX}} method="POST" enctype="multipart/form-data">
+    {% if S3_OR_DBX == 'S3' %}
+      <input type="hidden" id="filename_s3" name="filename_s3" value="">
+    {% elif S3_OR_DBX == 'DBX' %}
+      <input type="file" name="file">
+      <br>
+    {% endif %}
     <div class="form-group">
       {{render_field(form.title, class_="form-control", placeholder="e.g.'Tropical cyclone track forecasting'. This is the name the trainees will see.")}}
       <br>
@@ -28,6 +35,7 @@
 {% endblock %}
 
 {% block scripts %}
+{% if S3_OR_DBX == 'S3' %}
 <script>
 
 (function() {
@@ -84,4 +92,5 @@ function uploadFile(file, s3Data, url){
 }
 
 </script>
+{% endif %}
 {% endblock %}

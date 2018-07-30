@@ -24,12 +24,19 @@
     followed by "Extract".
   </p>
 
-  <input type="file" id="file_input" autofocus>
-  <p id="status">Please select a file</p>
+  {% if S3_OR_DBX == 'S3' %}
+    <input type="file" id="file_input" autofocus>
+    <p id="status">Please select a file</p>
+  {% endif %}
 
   {% from "includes/_formhelpers.html" import render_field %}
-  <form role="form" method="POST" action={{subd}}/upload>
-    <input type="hidden" id="filename_s3" name="filename_s3" value="">
+  <form role="form" method="POST" action={{subd}}/upload enctype="multipart/form-data">
+    {% if S3_OR_DBX == 'S3' %}
+      <input type="hidden" id="filename_s3" name="filename_s3" value="">
+    {% elif S3_OR_DBX == 'DBX' %}
+      <input type="file" name="file" autofocus required>
+      <br>
+    {% endif %}
     <div class="form-group">
       {{render_field(form.title, class_="form-control", placeholder="e.g.'Tropical cyclone track forecasting'. This is the name the trainees will see.")}}
       <br>
@@ -41,13 +48,18 @@
       <br>
       {{render_field(form.who, class_="form-control")}}
     </div>
-    <button type="submit" class="btn btn-success" id="submit_button" disabled>Upload material</button>
+    {% if S3_OR_DBX == 'S3' %}
+      <button type="submit" class="btn btn-success" id="submit_button" disabled>Upload material</button>
+    {% elif S3_OR_DBX == 'DBX' %}
+      <button type="submit" class="btn btn-success">Upload material</button>
+    {% endif %}
   </form>
 
   <hr>
 {% endblock %}
 
 {% block scripts %}
+{% if S3_OR_DBX == 'S3' %}
 <script>
 
 (function() {
@@ -103,4 +115,5 @@ function uploadFile(file, s3Data, url){
 }
 
 </script>
+{% endif %}
 {% endblock %}

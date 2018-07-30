@@ -32,14 +32,23 @@
                         {% set subData3 = subData2.loc[subData1['type']==type+iday|string] %}
                         {% for index, row in subData3.iterrows() %}
                           <h4>
-                            <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">
-                              <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                              {{row['title']}}
-                            </a>
+                            {% if S3_OR_DBX == 'S3' %}
+                              <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">
+                                <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                                {{row['title']}}
+                              </a>
+                            {% elif S3_OR_DBX == 'DBX' %}
+                              <form action={{subd}}/download-file/{{row['id']}} method="post">
+                                <a href="#" onclick="this.parentNode.submit()">
+                                  <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                                  {{row['title']}}
+                                </a>
+                              </form>
+                            {% endif %}
                             <small>Uploaded by <b>{{row['author']}}</b></small>
                           </h4>
                           {% if session.username == row['author'] or session.username == 'admin' %}
-                            <form action={{subd}}/edit/{{row['id']}} method="post" style="display:inline;">
+                            <form action={{subd}}/edit/{{row['id']}}/{{S3_OR_DBX}} method="post" style="display:inline;">
                               <input type="submit" name="edit" value="Edit" class="btn btn-primary">
                             </form>
                             <form action={{subd}}/delete-file/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');" style="display:inline;">
@@ -71,14 +80,23 @@
               {% set subData4 = subData2.loc[subData1['type']=='other'] %}
               {% for index, row in subData4.iterrows() %}
                 <h4>
-                  <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">
-                    <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                    {{row['title']}}
-                  </a>
+                  {% if S3_OR_DBX == 'S3' %}
+                    <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">
+                      <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                      {{row['title']}}
+                    </a>
+                  {% elif S3_OR_DBX == 'DBX' %}
+                    <form action={{subd}}/download-file/{{row['id']}} method="post">
+                      <a href="#" onclick="this.parentNode.submit()">
+                        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                        {{row['title']}}
+                      </a>
+                    </form>
+                  {% endif %}
                   <small>Uploaded by <b>{{row['author']}}</b></small>
                 </h4>
                 {% if session.username == row['author'] or session.username == 'admin' %}
-                  <form action={{subd}}/edit/{{row['id']}} method="post" style="display:inline;">
+                  <form action={{subd}}/edit/{{row['id']}}/{{S3_OR_DBX}} method="post" style="display:inline;">
                     <input type="submit" name="edit" value="Edit" class="btn btn-primary">
                   </form>
                   <form action={{subd}}/delete-file/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');" style="display:inline;">
@@ -101,6 +119,7 @@
 {% endblock %}
 
 {% block scripts %}
+{% if S3_OR_DBX == 'S3' %}
 <script>
 
 function getSignedRequestForDownload(id){
@@ -121,4 +140,5 @@ function getSignedRequestForDownload(id){
 }
 
 </script>
+{% endif %}
 {% endblock %}

@@ -15,7 +15,13 @@
     <tr>
       <td>{{row['workshop']}}</td>
       <td>
-        <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">Click to download</a>
+        {% if S3_OR_DBX == 'S3' %}
+          <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">Click to download</a>
+        {% elif S3_OR_DBX == 'DBX' %}
+          <form action={{subd}}/download-timetable/{{row['id']}} method="post">
+            <a href="#" onclick="this.parentNode.submit()">Click to download</a>
+          </form>
+        {% endif %}
       </td>
       <td>
         {% if session.username == row['author'] or session.username == 'admin' %}
@@ -34,21 +40,33 @@
   <h2>Upload new timetable</h2>
   <br>
   <p><b>Note: </b>This will overwrite any previously-uploaded timetable for the selected workshop</p>
-  <input type="file" id="file_input" autofocus>
-  <p id="status">Please select a file</p>
+  {% if S3_OR_DBX == 'S3' %}
+    <input type="file" id="file_input" autofocus>
+    <p id="status">Please select a file</p>
+  {% endif %}
   {% from "includes/_formhelpers.html" import render_field %}
-  <form role="form" method="POST" action={{subd}}/timetables>
-    <input type="hidden" id="filename_s3" name="filename_s3" value="">
+  <form role="form" method="POST" action={{subd}}/timetables enctype="multipart/form-data">
+    {% if S3_OR_DBX == 'S3' %}
+      <input type="hidden" id="filename_s3" name="filename_s3" value="">
+    {% elif S3_OR_DBX == 'DBX' %}
+      <input type="file" name="file" autofocus required>
+      <br>
+    {% endif %}
     <div class="form-group">
       {{render_field(form.workshop, class_="form-control")}}
     </div>
-    <button type="submit" class="btn btn-success" id="submit_button" disabled>Upload timetable</button>
+    {% if S3_OR_DBX == 'S3' %}
+      <button type="submit" class="btn btn-success" id="submit_button" disabled>Upload timetable</button>
+    {% elif S3_OR_DBX == 'DBX' %}
+      <button type="submit" class="btn btn-success">Upload material</button>
+    {% endif %}
   </form>
 {% endif %}
 
 {% endblock %}
 
 {% block scripts %}
+{% if S3_OR_DBX == 'S3' %}
 <script>
 
 (function() {
@@ -121,4 +139,5 @@ function getSignedRequestForDownload(id){
 }
 
 </script>
+{% endif %}
 {% endblock %}

@@ -9,6 +9,8 @@ from flask_sqlalchemy import SQLAlchemy
 import boto3
 from random import randint
 import json
+import sys
+import dropbox
 
 app = Flask(__name__)
 
@@ -17,9 +19,15 @@ assert "APP_SETTINGS" in os.environ, "APP_SETTINGS environment variable not set"
 assert "SECRET_KEY" in os.environ, "SECRET_KEY environment variable not set"
 assert "ADMIN_PWD" in os.environ, "ADMIN_PWD environment variable not set"
 assert "DATABASE_URL" in os.environ, "DATABASE_URL environment variable not set"
-assert "AWS_ACCESS_KEY_ID" in os.environ, "AWS_ACCESS_KEY_ID environment variable not set"
-assert "AWS_SECRET_ACCESS_KEY" in os.environ, "AWS_SECRET_ACCESS_KEY environment variable not set"
-assert "S3_BUCKET" in os.environ, "S3_BUCKET environment variable not set"
+assert "S3_OR_DBX" in os.environ, "S3_OR_DBX environment variable not set"
+if os.environ['S3_OR_DBX'] == 'S3':
+    assert "AWS_ACCESS_KEY_ID" in os.environ, "AWS_ACCESS_KEY_ID environment variable not set"
+    assert "AWS_SECRET_ACCESS_KEY" in os.environ, "AWS_SECRET_ACCESS_KEY environment variable not set"
+    assert "S3_BUCKET" in os.environ, "S3_BUCKET environment variable not set"
+elif os.environ['S3_OR_DBX'] == 'DBX':
+    assert "DROPBOX_KEY" in os.environ, "DROPBOX_KEY environment variable not set"
+else:
+    sys.exit("Variable S3_OR_DBX not set correctly")
 app.config.from_object(os.environ['APP_SETTINGS'])
 
 #Configure postgresql database:
@@ -144,6 +152,18 @@ def sign_s3_download_file():
     return json.dumps({
       'url': presigned_url,
     })
+
+def upload_file_to_dbx(file,filename):
+    dbx = dropbox.Dropbox(app.config['DROPBOX_KEY'])
+    response = dbx.files_upload(file.read(),'/'+filename,mute=True)
+
+def download_file_from_dbx(filename):
+    dbx = dropbox.Dropbox(app.config['DROPBOX_KEY'])
+    response = dbx.files_download_to_file('/tmp/'+filename,'/'+filename)
+
+def delete_file_from_dbx(filename):
+    dbx = dropbox.Dropbox(app.config['DROPBOX_KEY'])
+    response = dbx.files_delete('/'+filename)
 ##################################
 
 ########## LOGGED-IN FUNCTIONS ##########
@@ -320,8 +340,11 @@ def timetables():
     #If user tries to upload a timetable
     if request.method == 'POST':
         if form.validate():
-            #Get S3 filename:
-            filename_s3 = request.form['filename_s3']
+            if app.config['S3_OR_DBX'] == 'S3': #Get filename only
+                filename = request.form['filename_s3']
+            else: #Also get file
+                file = request.files['file']
+                filename = secure_filename(file.filename)
             #Get fields from web-form
             workshop = form.workshop.data
             author = session['username']
@@ -331,24 +354,30 @@ def timetables():
                 old_filename=timetable.filename
                 #Delete from DB:
                 psql_delete(timetable)
-                #Delete from S3 bucket:
+                #Delete from cloud:
                 try:
-                    delete_file_from_s3(old_filename)
+                    if app.config['S3_OR_DBX'] == 'S3':
+                        delete_file_from_s3(old_filename)
+                    else:
+                        delete_file_from_dbx(str(timetable.id)+'_'+old_filename)
                 except:
-                    flash("Unable to delete timetable from S3","warning")
+                    flash("Unable to delete timetable from cloud","warning")
             #Insert new timetable into database:
-            db_row = Timetables(filename=filename_s3,workshop=workshop,author=author)
+            db_row = Timetables(filename=filename,workshop=workshop,author=author)
             id = psql_insert(db_row)
+            if app.config['S3_OR_DBX'] == 'DBX': #Save file to dropbox
+                filename_in_dbx = str(id)+'_'+filename
+                upload_file_to_dbx(file, filename_in_dbx)
             #flash success message and reload page
             flash('Timetable uploaded successfully', 'success')
             return redirect(subd+'/timetables')
         else:
-            #Delete file from S3:
-            filename_s3 = request.form['filename_s3']
-            delete_file_from_s3(filename_s3)
+            if app.config['S3_OR_DBX'] == 'S3': #Delete file from S3
+                filename_s3 = request.form['filename_s3']
+                delete_file_from_s3(filename_s3)
             #Flash error message:
             flash('Fix form errors and try again', 'danger')
-    return render_template('timetables.html',subd=subd,form=form,timetablesData=timetablesData)
+    return render_template('timetables.html',subd=subd,form=form,timetablesData=timetablesData,S3_OR_DBX=app.config['S3_OR_DBX'])
 
 @app.route('/training-material')
 @is_logged_in
@@ -356,7 +385,7 @@ def training_material():
     filesData = psql_to_pandas(Files.query)
     workshopDF = psql_to_pandas(Workshops.query)
     workshopList = workshopDF['workshop'].values.tolist()
-    return render_template('material.html',subd=subd,filesData=filesData,workshopList=workshopList,who='trainees')
+    return render_template('material.html',subd=subd,filesData=filesData,workshopList=workshopList,who='trainees',S3_OR_DBX=app.config['S3_OR_DBX'])
 
 @app.route('/partners')
 def partners():
@@ -372,7 +401,7 @@ def trainer_material():
     filesData = psql_to_pandas(Files.query)
     workshopDF = psql_to_pandas(Workshops.query)
     workshopList = workshopDF['workshop'].values.tolist()
-    return render_template('material.html',subd=subd,filesData=filesData,workshopList=workshopList,who='trainers')
+    return render_template('material.html',subd=subd,filesData=filesData,workshopList=workshopList,who='trainers',S3_OR_DBX=app.config['S3_OR_DBX'])
 
 @app.route('/upload', methods=["GET","POST"])
 @is_logged_in_as_trainer
@@ -382,8 +411,11 @@ def upload():
     #If user tries to upload a file
     if request.method == 'POST':
         if form.validate():
-            #Get S3 filename:
-            filename_s3 = request.form['filename_s3']
+            if app.config['S3_OR_DBX'] == 'S3': #Get filename only
+                filename = request.form['filename_s3']
+            else: #Also get file
+                file = request.files['file']
+                filename = secure_filename(file.filename)
             #Get fields from web-form
             title = form.title.data
             description = form.description.data
@@ -392,19 +424,22 @@ def upload():
             who = form.who.data
             author = session['username']
             #Insert into files database:
-            db_row=Files(filename=filename_s3,title=title,description=description,workshop=workshop,type=type,who=who,author=author)
+            db_row=Files(filename=filename,title=title,description=description,workshop=workshop,type=type,who=who,author=author)
             id = psql_insert(db_row)
+            if app.config['S3_OR_DBX'] == 'DBX': #Save file to dropbox
+                filename_in_dbx = str(id)+'_'+filename
+                upload_file_to_dbx(file, filename_in_dbx)
             #flash success message and reload page
             flash('File uploaded successfully', 'success')
             return redirect(subd+'/upload')
         else:
-            #Delete file from S3:
-            filename_s3 = request.form['filename_s3']
-            delete_file_from_s3(filename_s3)
+            if app.config['S3_OR_DBX'] == 'S3': #Delete file from S3
+                filename_s3 = request.form['filename_s3']
+                delete_file_from_s3(filename_s3)
             #Flash error message:
             flash('Fix form errors and try again', 'danger')
     #If user just navigates to page
-    return render_template('upload.html',subd=subd,form=form)
+    return render_template('upload.html',subd=subd,form=form,S3_OR_DBX=app.config['S3_OR_DBX'])
 
 @app.route('/trainee-accounts', methods=["GET","POST"])
 @is_logged_in_as_trainer
@@ -477,9 +512,9 @@ def workshops():
         return redirect(subd+'/workshops')
     return render_template('workshops.html',subd=subd,workshopsData=workshopsData)
 
-@app.route('/edit/<string:id>', methods=["POST"])
+@app.route('/edit/<string:id>/<string:S3_OR_DBX>', methods=["POST"])
 @is_logged_in_as_trainer
-def edit(id):
+def edit(id,S3_OR_DBX):
     result = Files.query.filter_by(id=id).first()
     if result is None:
         abort(404)
@@ -491,17 +526,30 @@ def edit(id):
         form.workshop.data = result.workshop
         form.type.data = result.type
         form.who.data = result.who
-        return render_template('edit.html',subd=subd,form=form,id=id)
+        return render_template('edit.html',subd=subd,form=form,id=id,S3_OR_DBX=S3_OR_DBX)
     else:
         form = UploadForm(request.form)
         form.workshop.choices = get_workshop_list()
         if form.validate():
-            #Get S3 filename and delete old file if not blank:
-            filename_s3 = request.form['filename_s3']
-            if not filename_s3 == "":
+            if app.config['S3_OR_DBX'] == 'S3': #Get filename only
+                filename = request.form['filename_s3']
+            else: #Also get file
+                if 'file' in request.files:
+                    file = request.files['file']
+                    filename = secure_filename(file.filename)
+                else:
+                    filename = ''
+            #Delete old file if not blank:
+            if not filename == '':
                 old_filename=result.filename
-                delete_file_from_s3(old_filename)
-                result.filename = filename_s3
+                if app.config['S3_OR_DBX'] == 'S3':
+                    delete_file_from_s3(old_filename)
+                else:
+                    delete_file_from_dbx(id+'_'+old_filename)
+                    #Save new file to dropbox:
+                    filename_in_dbx = id+'_'+filename
+                    upload_file_to_dbx(file, filename_in_dbx)
+                result.filename = filename
             #Get form info:
             title = form.title.data
             description = form.description.data
@@ -518,55 +566,55 @@ def edit(id):
             flash('File edits successful', 'success')
             return redirect(subd+'/')
         else:
-            #Delete file from S3 if not blank:
-            filename_s3 = request.form['filename_s3']
-            if not filename_s3 == "":
-                delete_file_from_s3(filename_s3)
+            if app.config['S3_OR_DBX'] == 'S3': #Delete file from S3 if not blank:
+                filename = request.form['filename_s3']
+                if not filename == "":
+                    delete_file_from_s3(filename)
             #Flash error message:
             flash('Invalid option selected, please try to edit the file again', 'danger')
             return redirect(subd+'/')
 
 #Download file
 @app.route('/download-file/<string:id>', methods=['POST'])
-#THIS ROUTE SHOULDN'T BE USED NOW - USING DIRECT DOWNLOAD METHOD INSTEAD
 @is_logged_in
 def download_file(id):
     result = Files.query.filter_by(id=id).first()
     if result is None:
         abort(404)
     filename = result.filename
-    #Try to download the file from S3 bucket to /tmp if it's not already there:
-    if not os.path.exists('/tmp/'+filename):
+    filename_dbx = id+'_'+filename
+    #Try to download the file from dbx to /tmp if it's not already there:
+    if not os.path.exists('/tmp/'+filename_dbx):
         try:
-            download_file_from_s3(filename)
+            download_file_from_dbx(filename_dbx)
         except:
             flash("Unable to download file","danger")
-            return redirect(subd+'/timetables')
+            return redirect(subd+'/')
     #Serve the file to the client:
-    if os.path.exists('/tmp/'+filename):
-        return send_from_directory('/tmp',filename,as_attachment=True,attachment_filename=filename)
+    if os.path.exists('/tmp/'+filename_dbx):
+        return send_from_directory('/tmp',filename_dbx,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
 
 #Download timetable
 @app.route('/download-timetable/<string:id>', methods=['POST'])
-#THIS ROUTE SHOULDN'T BE USED NOW - USING DIRECT DOWNLOAD METHOD INSTEAD
 @is_logged_in
 def download_timetable(id):
     result = Timetables.query.filter_by(id=id).first()
     if result is None:
         abort(404)
     filename = result.filename
-    #Try to download the timetable from S3 bucket to /tmp if it's not already there:
-    if not os.path.exists('/tmp/'+filename):
+    filename_dbx = id+'_'+filename
+    #Try to download the timetable from dbx to /tmp if it's not already there:
+    if not os.path.exists('/tmp/'+filename_dbx):
         try:
-            download_file_from_s3(filename)
+            download_file_from_dbx(filename_dbx)
         except:
             flash("Unable to download timetable","danger")
             return redirect(subd+'/timetables')
     #Serve the timetable to the client:
-    if os.path.exists('/tmp/'+filename):
-        return send_from_directory('/tmp',filename,as_attachment=True,attachment_filename=filename)
+    if os.path.exists('/tmp/'+filename_dbx):
+        return send_from_directory('/tmp',filename_dbx,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
 
@@ -580,11 +628,14 @@ def delete_file(id):
     filename = result.filename
     #Delete from DB:
     psql_delete(result)
-    #Delete from S3 bucket:
+    #Delete from cloud:
     try:
-        delete_file_from_s3(filename)
+        if app.config['S3_OR_DBX'] == 'S3':
+            delete_file_from_s3(filename)
+        else:
+            delete_file_from_dbx(id+'_'+filename)
     except:
-        flash("Unable to delete file from S3","warning")
+        flash("Unable to delete file from cloud","warning")
     flash("File deleted","success")
     return redirect(subd+'/')
 
@@ -598,11 +649,14 @@ def delete_timetable(id):
     filename = result.filename
     #Delete from DB:
     psql_delete(result)
-    #Delete from S3 bucket:
+    #Delete from cloud:
     try:
-        delete_file_from_s3(filename)
+        if app.config['S3_OR_DBX'] == 'S3':
+            delete_file_from_s3(filename)
+        else:
+            delete_file_from_dbx(id+'_'+filename)
     except:
-        flash("Unable to delete timetable from S3","warning")
+        flash("Unable to delete timetable from cloud","warning")
     flash("Timetable deleted","success")
     return redirect(subd+'/timetables')
 
