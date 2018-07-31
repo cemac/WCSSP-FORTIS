@@ -18,14 +18,14 @@
         {% if S3_OR_DBX == 'S3' %}
           <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">Click to download</a>
         {% elif S3_OR_DBX == 'DBX' %}
-          <form action={{subd}}/download-timetable/{{row['id']}} method="post">
+          <form action=/download-timetable/{{row['id']}} method="post">
             <a href="#" onclick="this.parentNode.submit()">Click to download</a>
           </form>
         {% endif %}
       </td>
       <td>
         {% if session.username == row['author'] or session.username == 'admin' %}
-          <form action={{subd}}/delete-timetable/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
+          <form action=/delete-timetable/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
             <input type="hidden" name="_method" value="DELETE">
             <input type="submit" value="Delete" class="btn btn-danger">
           </form>
@@ -45,7 +45,7 @@
     <p id="status">Please select a file</p>
   {% endif %}
   {% from "includes/_formhelpers.html" import render_field %}
-  <form role="form" method="POST" action={{subd}}/timetables enctype="multipart/form-data">
+  <form role="form" method="POST" action=/timetables enctype="multipart/form-data">
     {% if S3_OR_DBX == 'S3' %}
       <input type="hidden" id="filename_s3" name="filename_s3" value="">
     {% elif S3_OR_DBX == 'DBX' %}

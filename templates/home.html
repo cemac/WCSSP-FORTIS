@@ -10,7 +10,7 @@ body,html {
   height: auto;
 } */
 .bgimg {
-  background-image: url("{{subd}}/static/Hector_cloud_from_Gunn_Point.jpg");
+  background-image: url("/static/Hector_cloud_from_Gunn_Point.jpg");
   height: 100%;
   background-repeat: no-repeat;
   background-size: cover;
@@ -27,7 +27,7 @@ body,html {
   {% if session.logged_in %}
     <h2 style="color: white;">
       You are currently logged in as <b>{{ session.username }}</b>.
-      You can view the training material <a href={{subd}}/training-material>here</a>
+      You can view the training material <a href=/training-material>here</a>
     </h2>
   {% else %}
     <h2 style="color: white;">Please log in to access the training material</h2>

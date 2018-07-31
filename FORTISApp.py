@@ -34,9 +34,6 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 db = SQLAlchemy(app)
 from models import Trainees, Trainers, Workshops, Files, Timetables
 
-#Other parameters:
-subd=""
-
 ########## PSQL FUNCTIONS ##########
 def psql_to_pandas(query):
     df = pd.read_sql(query.statement,db.session.bind)
@@ -54,32 +51,6 @@ def psql_delete(row):
 ####################################
 
 ########## S3 FUNCTIONS/ROUTES ##########
-def upload_file_to_s3(file, filename):
-    #THIS SUBROUTINE SHOULDN'T BE USED NOW - USING DIRECT UPLOAD METHOD INSTEAD
-    bucket_name = app.config['S3_BUCKET']
-    s3 = boto3.client('s3','eu-west-2')
-    s3.upload_fileobj(
-        file,
-        bucket_name,
-        filename,
-        ExtraArgs={
-            "ACL": "private",
-            "ContentType": file.content_type
-        }
-    )
-    return
-
-def download_file_from_s3(filename):
-    #THIS SUBROUTINE SHOULDN'T BE USED NOW - USING DIRECT DOWNLOAD METHOD INSTEAD
-    bucket_name = app.config['S3_BUCKET']
-    s3 = boto3.resource('s3','eu-west-2')
-    s3.meta.client.download_file(
-        bucket_name,
-        filename,
-        '/tmp/'+filename
-    )
-    return
-
 def delete_file_from_s3(filename):
     bucket_name = app.config['S3_BUCKET']
     s3 = boto3.resource('s3','eu-west-2')
@@ -175,7 +146,7 @@ def is_logged_in(f):
             return f(*args, **kwargs)
         else:
             flash('Unauthorised, please login', 'danger')
-            return redirect(subd+'/')
+            return redirect(url_for('index'))
     return wrap
 
 #Check if user is logged in as a trainer/admin
@@ -186,7 +157,7 @@ def is_logged_in_as_trainer(f):
             return f(*args, **kwargs)
         else:
             flash('Unauthorised, please login as a trainer/admin', 'danger')
-            return redirect(subd+'/')
+            return redirect(url_for('index'))
     return wrap
 
 #Check if user is logged in as admin
@@ -197,7 +168,7 @@ def is_logged_in_as_admin(f):
             return f(*args, **kwargs)
         else:
             flash('Unauthorised, please login as admin', 'danger')
-            return redirect(subd+'/')
+            return redirect(url_for('index'))
     return wrap
 #########################################
 
@@ -290,10 +261,10 @@ def index():
                 session['username'] = username
                 session['usertype'] = 'trainee'
                 flash('You are now logged in', 'success')
-                return redirect(subd+'/')
+                return redirect(url_for('index'))
             else:
                 flash('Incorrect password', 'danger')
-                return redirect(subd+'/')
+                return redirect(url_for('index'))
         #Check trainer accounts next:
         user = Trainers.query.filter_by(username=username).first()
         if user is not None:
@@ -305,10 +276,10 @@ def index():
                 session['username'] = username
                 session['usertype'] = 'trainer'
                 flash('You are now logged in', 'success')
-                return redirect(subd+'/')
+                return redirect(url_for('index'))
             else:
                 flash('Incorrect password', 'danger')
-                return redirect(subd+'/')
+                return redirect(url_for('index'))
         #Finally check admin account:
         if username == 'admin':
             password = app.config['ADMIN_PWD']
@@ -318,18 +289,18 @@ def index():
                 session['username'] = 'admin'
                 session['usertype'] = 'admin'
                 flash('You are now logged in', 'success')
-                return redirect(subd+'/')
+                return redirect(url_for('index'))
             else:
                 flash('Incorrect password', 'danger')
-                return redirect(subd+'/')
+                return redirect(url_for('index'))
         #Username not found:
         flash('Username not found', 'danger')
-        return redirect(subd+'/')
-    return render_template('home.html',subd=subd)
+        return redirect(url_for('index'))
+    return render_template('home.html')
 
 @app.route('/about')
 def about():
-    return render_template('about.html',subd=subd)
+    return render_template('about.html')
 
 @app.route('/timetables', methods=["GET","POST"])
 @is_logged_in
@@ -370,14 +341,14 @@ def timetables():
                 upload_file_to_dbx(file, filename_in_dbx)
             #flash success message and reload page
             flash('Timetable uploaded successfully', 'success')
-            return redirect(subd+'/timetables')
+            return redirect(url_for('timetables'))
         else:
             if app.config['S3_OR_DBX'] == 'S3': #Delete file from S3
                 filename_s3 = request.form['filename_s3']
                 delete_file_from_s3(filename_s3)
             #Flash error message:
             flash('Fix form errors and try again', 'danger')
-    return render_template('timetables.html',subd=subd,form=form,timetablesData=timetablesData,S3_OR_DBX=app.config['S3_OR_DBX'])
+    return render_template('timetables.html',form=form,timetablesData=timetablesData,S3_OR_DBX=app.config['S3_OR_DBX'])
 
 @app.route('/training-material')
 @is_logged_in
@@ -385,15 +356,15 @@ def training_material():
     filesData = psql_to_pandas(Files.query)
     workshopDF = psql_to_pandas(Workshops.query)
     workshopList = workshopDF['workshop'].values.tolist()
-    return render_template('material.html',subd=subd,filesData=filesData,workshopList=workshopList,who='trainees',S3_OR_DBX=app.config['S3_OR_DBX'])
+    return render_template('material.html',filesData=filesData,workshopList=workshopList,who='trainees',S3_OR_DBX=app.config['S3_OR_DBX'])
 
 @app.route('/partners')
 def partners():
-    return render_template('partners.html',subd=subd)
+    return render_template('partners.html')
 
 @app.route('/contact-us')
 def contact_us():
-    return render_template('contact-us.html',subd=subd)
+    return render_template('contact-us.html')
 
 @app.route('/trainer-material')
 @is_logged_in_as_trainer
@@ -401,7 +372,7 @@ def trainer_material():
     filesData = psql_to_pandas(Files.query)
     workshopDF = psql_to_pandas(Workshops.query)
     workshopList = workshopDF['workshop'].values.tolist()
-    return render_template('material.html',subd=subd,filesData=filesData,workshopList=workshopList,who='trainers',S3_OR_DBX=app.config['S3_OR_DBX'])
+    return render_template('material.html',filesData=filesData,workshopList=workshopList,who='trainers',S3_OR_DBX=app.config['S3_OR_DBX'])
 
 @app.route('/upload', methods=["GET","POST"])
 @is_logged_in_as_trainer
@@ -431,7 +402,7 @@ def upload():
                 upload_file_to_dbx(file, filename_in_dbx)
             #flash success message and reload page
             flash('File uploaded successfully', 'success')
-            return redirect(subd+'/upload')
+            return redirect(url_for('upload'))
         else:
             if app.config['S3_OR_DBX'] == 'S3': #Delete file from S3
                 filename_s3 = request.form['filename_s3']
@@ -439,7 +410,7 @@ def upload():
             #Flash error message:
             flash('Fix form errors and try again', 'danger')
     #If user just navigates to page
-    return render_template('upload.html',subd=subd,form=form,S3_OR_DBX=app.config['S3_OR_DBX'])
+    return render_template('upload.html',form=form,S3_OR_DBX=app.config['S3_OR_DBX'])
 
 @app.route('/trainee-accounts', methods=["GET","POST"])
 @is_logged_in_as_trainer
@@ -452,13 +423,13 @@ def trainee_accounts():
         user = Trainees.query.filter_by(username=username).first()
         if user is not None:
             flash('Username already exists', 'danger')
-            return redirect(subd+'/trainee-accounts')
+            return redirect(url_for('trainee_accounts'))
         password = form.password.data
         db_row = Trainees(username=username,password=password)
         id = psql_insert(db_row)
         flash('Trainee account added', 'success')
-        return redirect(subd+'/trainee-accounts')
-    return render_template('trainee-accounts.html',subd=subd,form=form,usersData=usersData)
+        return redirect(url_for('trainee_accounts'))
+    return render_template('trainee-accounts.html',form=form,usersData=usersData)
 
 @app.route('/trainer-accounts', methods=["GET","POST"])
 @is_logged_in_as_admin
@@ -471,16 +442,16 @@ def trainer_accounts():
         user = Trainers.query.filter_by(username=username).first()
         if user is not None:
             flash('Username already exists', 'danger')
-            return redirect(subd+'/trainer-accounts')
+            return redirect(url_for('trainer_accounts'))
         if username == 'admin' or username.startswith('trainee'):
             flash('Username not allowed', 'danger')
-            return redirect(subd+'/trainer-accounts')
+            return redirect(url_for('trainer_accounts'))
         password = sha256_crypt.encrypt(str(form.password.data))
         db_row = Trainers(username=username,password=password)
         id = psql_insert(db_row)
         flash('Trainer account added', 'success')
-        return redirect(subd+'/trainer-accounts')
-    return render_template('trainer-accounts.html',subd=subd,form=form,usersData=usersData)
+        return redirect(url_for('trainer_accounts'))
+    return render_template('trainer-accounts.html',form=form,usersData=usersData)
 
 @app.route('/change-pwd', methods=["GET","POST"])
 @is_logged_in_as_trainer
@@ -494,11 +465,11 @@ def change_pwd():
             user.password = sha256_crypt.encrypt(str(form.new.data))
             db.session.commit()
             flash('Password changed', 'success')
-            return redirect(subd+'/change-pwd')
+            return redirect(url_for('change_pwd'))
         else:
             flash('Current password incorrect', 'danger')
-            return redirect(subd+'/change-pwd')
-    return render_template('change-pwd.html',subd=subd,form=form)
+            return redirect(url_for('change_pwd'))
+    return render_template('change-pwd.html',form=form)
 
 @app.route('/workshops', methods=["GET","POST"])
 @is_logged_in_as_admin
@@ -509,8 +480,8 @@ def workshops():
         db_row = Workshops(workshop=workshop)
         id = psql_insert(db_row)
         flash('Workshop added', 'success')
-        return redirect(subd+'/workshops')
-    return render_template('workshops.html',subd=subd,workshopsData=workshopsData)
+        return redirect(url_for('workshops'))
+    return render_template('workshops.html',workshopsData=workshopsData)
 
 @app.route('/edit/<string:id>/<string:S3_OR_DBX>', methods=["POST"])
 @is_logged_in_as_trainer
@@ -526,7 +497,7 @@ def edit(id,S3_OR_DBX):
         form.workshop.data = result.workshop
         form.type.data = result.type
         form.who.data = result.who
-        return render_template('edit.html',subd=subd,form=form,id=id,S3_OR_DBX=S3_OR_DBX)
+        return render_template('edit.html',form=form,id=id,S3_OR_DBX=S3_OR_DBX)
     else:
         form = UploadForm(request.form)
         form.workshop.choices = get_workshop_list()
@@ -564,7 +535,7 @@ def edit(id,S3_OR_DBX):
             result.who = who
             db.session.commit()
             flash('File edits successful', 'success')
-            return redirect(subd+'/')
+            return redirect(url_for('index'))
         else:
             if app.config['S3_OR_DBX'] == 'S3': #Delete file from S3 if not blank:
                 filename = request.form['filename_s3']
@@ -572,7 +543,7 @@ def edit(id,S3_OR_DBX):
                     delete_file_from_s3(filename)
             #Flash error message:
             flash('Invalid option selected, please try to edit the file again', 'danger')
-            return redirect(subd+'/')
+            return redirect(url_for('index'))
 
 #Download file
 @app.route('/download-file/<string:id>', methods=['POST'])
@@ -589,7 +560,7 @@ def download_file(id):
             download_file_from_dbx(filename_dbx)
         except:
             flash("Unable to download file","danger")
-            return redirect(subd+'/')
+            return redirect(url_for('index'))
     #Serve the file to the client:
     if os.path.exists('/tmp/'+filename_dbx):
         return send_from_directory('/tmp',filename_dbx,as_attachment=True,attachment_filename=filename)
@@ -611,7 +582,7 @@ def download_timetable(id):
             download_file_from_dbx(filename_dbx)
         except:
             flash("Unable to download timetable","danger")
-            return redirect(subd+'/timetables')
+            return redirect(url_for('timetables'))
     #Serve the timetable to the client:
     if os.path.exists('/tmp/'+filename_dbx):
         return send_from_directory('/tmp',filename_dbx,as_attachment=True,attachment_filename=filename)
@@ -637,7 +608,7 @@ def delete_file(id):
     except:
         flash("Unable to delete file from cloud","warning")
     flash("File deleted","success")
-    return redirect(subd+'/')
+    return redirect(url_for('index'))
 
 #Delete timetable
 @app.route('/delete-timetable/<string:id>', methods=['POST'])
@@ -658,7 +629,7 @@ def delete_timetable(id):
     except:
         flash("Unable to delete timetable from cloud","warning")
     flash("Timetable deleted","success")
-    return redirect(subd+'/timetables')
+    return redirect(url_for('timetables'))
 
 #Delete trainee
 @app.route('/delete-trainee/<string:id>', methods=['POST'])
@@ -669,7 +640,7 @@ def delete_trainee(id):
         abort(404)
     psql_delete(result)
     flash('Trainee account deleted', 'success')
-    return redirect(subd+'/trainee-accounts')
+    return redirect(url_for('trainee_accounts'))
 
 #Delete trainer
 @app.route('/delete-trainer/<string:id>', methods=['POST'])
@@ -680,7 +651,7 @@ def delete_trainer(id):
         abort(404)
     psql_delete(result)
     flash('Trainer account deleted', 'success')
-    return redirect(subd+'/trainer-accounts')
+    return redirect(url_for('trainer_accounts'))
 
 #Delete workshop
 @app.route('/delete-workshop/<string:id>', methods=['POST'])
@@ -691,7 +662,7 @@ def delete_workshop(id):
         abort(404)
     psql_delete(result)
     flash('Workshop deleted', 'success')
-    return redirect(subd+'/workshops')
+    return redirect(url_for('workshops'))
 
 #Logout
 @app.route('/logout')
@@ -699,7 +670,7 @@ def delete_workshop(id):
 def logout():
     session.clear()
     flash('You are now logged out', 'success')
-    return redirect(subd+'/')
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)

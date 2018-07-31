@@ -24,7 +24,7 @@
       <tr>
         <td>{{row['workshop']}}</td>
         <td>
-          <form action={{subd}}/delete-workshop/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
+          <form action=/delete-workshop/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
             <input type="hidden" name="_method" value="DELETE">
             <input type="submit" value="Delete" class="btn btn-danger">
           </form>
