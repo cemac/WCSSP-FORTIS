@@ -315,7 +315,7 @@ def timetables():
                 filename = request.form['filename_s3']
             else: #Also get file
                 file = request.files['file']
-                filename = secure_filename(file.filename)
+                filename = str(randint(10000,99999)) + '_' + secure_filename(file.filename)
             #Get fields from web-form
             workshop = form.workshop.data
             author = session['username']
@@ -330,15 +330,14 @@ def timetables():
                     if app.config['S3_OR_DBX'] == 'S3':
                         delete_file_from_s3(old_filename)
                     else:
-                        delete_file_from_dbx(str(timetable.id)+'_'+old_filename)
+                        delete_file_from_dbx(old_filename)
                 except:
                     flash("Unable to delete timetable from cloud","warning")
             #Insert new timetable into database:
             db_row = Timetables(filename=filename,workshop=workshop,author=author)
             id = psql_insert(db_row)
             if app.config['S3_OR_DBX'] == 'DBX': #Save file to dropbox
-                filename_in_dbx = str(id)+'_'+filename
-                upload_file_to_dbx(file, filename_in_dbx)
+                upload_file_to_dbx(file, filename)
             #flash success message and reload page
             flash('Timetable uploaded successfully', 'success')
             return redirect(url_for('timetables'))
@@ -386,7 +385,7 @@ def upload():
                 filename = request.form['filename_s3']
             else: #Also get file
                 file = request.files['file']
-                filename = secure_filename(file.filename)
+                filename = str(randint(10000,99999)) + '_' + secure_filename(file.filename)
             #Get fields from web-form
             title = form.title.data
             description = form.description.data
@@ -398,8 +397,7 @@ def upload():
             db_row=Files(filename=filename,title=title,description=description,workshop=workshop,type=type,who=who,author=author)
             id = psql_insert(db_row)
             if app.config['S3_OR_DBX'] == 'DBX': #Save file to dropbox
-                filename_in_dbx = str(id)+'_'+filename
-                upload_file_to_dbx(file, filename_in_dbx)
+                upload_file_to_dbx(file, filename)
             #flash success message and reload page
             flash('File uploaded successfully', 'success')
             return redirect(url_for('upload'))
@@ -516,10 +514,9 @@ def edit(id,S3_OR_DBX):
                 if app.config['S3_OR_DBX'] == 'S3':
                     delete_file_from_s3(old_filename)
                 else:
-                    delete_file_from_dbx(id+'_'+old_filename)
+                    delete_file_from_dbx(old_filename)
                     #Save new file to dropbox:
-                    filename_in_dbx = id+'_'+filename
-                    upload_file_to_dbx(file, filename_in_dbx)
+                    upload_file_to_dbx(file, filename)
                 result.filename = filename
             #Get form info:
             title = form.title.data
@@ -545,7 +542,7 @@ def edit(id,S3_OR_DBX):
             flash('Invalid option selected, please try to edit the file again', 'danger')
             return redirect(url_for('index'))
 
-#Download file
+#Download file (Dropbox only)
 @app.route('/download-file/<string:id>', methods=['POST'])
 @is_logged_in
 def download_file(id):
@@ -553,21 +550,20 @@ def download_file(id):
     if result is None:
         abort(404)
     filename = result.filename
-    filename_dbx = id+'_'+filename
     #Try to download the file from dbx to /tmp if it's not already there:
-    if not os.path.exists('/tmp/'+filename_dbx):
+    if not os.path.exists('/tmp/'+filename):
         try:
-            download_file_from_dbx(filename_dbx)
+            download_file_from_dbx(filename)
         except:
             flash("Unable to download file","danger")
             return redirect(url_for('index'))
     #Serve the file to the client:
-    if os.path.exists('/tmp/'+filename_dbx):
-        return send_from_directory('/tmp',filename_dbx,as_attachment=True,attachment_filename=filename)
+    if os.path.exists('/tmp/'+filename):
+        return send_from_directory('/tmp',filename,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
 
-#Download timetable
+#Download timetable (Dropbox only)
 @app.route('/download-timetable/<string:id>', methods=['POST'])
 @is_logged_in
 def download_timetable(id):
@@ -575,17 +571,16 @@ def download_timetable(id):
     if result is None:
         abort(404)
     filename = result.filename
-    filename_dbx = id+'_'+filename
     #Try to download the timetable from dbx to /tmp if it's not already there:
-    if not os.path.exists('/tmp/'+filename_dbx):
+    if not os.path.exists('/tmp/'+filename):
         try:
-            download_file_from_dbx(filename_dbx)
+            download_file_from_dbx(filename)
         except:
             flash("Unable to download timetable","danger")
             return redirect(url_for('timetables'))
     #Serve the timetable to the client:
-    if os.path.exists('/tmp/'+filename_dbx):
-        return send_from_directory('/tmp',filename_dbx,as_attachment=True,attachment_filename=filename)
+    if os.path.exists('/tmp/'+filename):
+        return send_from_directory('/tmp',filename,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
 
@@ -604,7 +599,7 @@ def delete_file(id):
         if app.config['S3_OR_DBX'] == 'S3':
             delete_file_from_s3(filename)
         else:
-            delete_file_from_dbx(id+'_'+filename)
+            delete_file_from_dbx(filename)
     except:
         flash("Unable to delete file from cloud","warning")
     flash("File deleted","success")
@@ -625,7 +620,7 @@ def delete_timetable(id):
         if app.config['S3_OR_DBX'] == 'S3':
             delete_file_from_s3(filename)
         else:
-            delete_file_from_dbx(id+'_'+filename)
+            delete_file_from_dbx(filename)
     except:
         flash("Unable to delete timetable from cloud","warning")
     flash("Timetable deleted","success")
