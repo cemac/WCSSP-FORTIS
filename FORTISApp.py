@@ -505,7 +505,7 @@ def edit(id,S3_OR_DBX):
             else: #Also get file
                 if 'file' in request.files:
                     file = request.files['file']
-                    filename = secure_filename(file.filename)
+                    filename = str(randint(10000,99999)) + '_' + secure_filename(file.filename)
                 else:
                     filename = ''
             #Delete old file if not blank:
