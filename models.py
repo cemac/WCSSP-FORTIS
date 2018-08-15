@@ -79,3 +79,19 @@ class Timetables(db.Model):
 
     def __repr__(self):
         return '<id {}>'.format(self.id)
+
+class Folders(db.Model):
+    __tablename__ = 'folders'
+
+    id = db.Column(db.Integer, primary_key=True)
+    workshop = db.Column(db.String())
+    parent = db.Column(db.String())
+    name = db.Column(db.String())
+
+    def __init__(self, workshop, parent, name):
+        self.workshop = workshop
+        self.parent = parent
+        self.name = name
+
+    def __repr__(self):
+        return '<id {}>'.format(self.id)

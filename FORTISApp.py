@@ -33,7 +33,7 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 
 #Configure postgresql database:
 db = SQLAlchemy(app)
-from models import Trainees, Trainers, Workshops, Files, Timetables
+from models import Trainees, Trainers, Workshops, Files, Timetables, Folders
 
 ########## PSQL FUNCTIONS ##########
 def psql_to_pandas(query):
@@ -493,6 +493,27 @@ def workshops():
         flash('Workshop added', 'success')
         return redirect(url_for('workshops'))
     return render_template('workshops.html',workshopsData=workshopsData)
+
+@app.route('/folders/<string:id>')
+@is_logged_in_as_admin
+def folders(id):
+    #Retrieve workshop:
+    result = Workshops.query.filter_by(id=id).first()
+    if result is None:
+        abort(404)
+    allFoldersData = psql_to_pandas(Folders.query)
+    foldersData=allFoldersData.loc[allFoldersData['workshop'] == result.workshop]
+    return render_template('folders.html',data=foldersData,workshopName=result.workshop,workshopID=id)
+
+@app.route('/add-folder/<string:id>/<string:parent>', methods=["POST"])
+@is_logged_in_as_admin
+def add_folder(id,parent):
+    #Retrieve workshop:
+    workshop = Workshops.query.filter_by(id=id).first().workshop
+    name = request.form['folder']
+    db_row = Folders(workshop=workshop,parent=parent,name=name)
+    dummy = psql_insert(db_row)
+    return redirect(url_for('folders',id=id))
 
 @app.route('/edit/<string:id>/<string:S3_OR_DBX>', methods=["POST"])
 @is_logged_in_as_trainer

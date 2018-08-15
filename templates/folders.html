@@ -1,0 +1,57 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+
+  <h1>Edit Folder Structure</h1>
+  <h3>Workshop on {{workshopName}}</h3>
+  <hr>
+  <table>
+    {% for iday in range(1,6) %}
+      <tr>
+        <td>Day {{iday}}</td>
+        <td></td>
+        <td></td>
+      </tr>
+      {% set Titles = ['Lectures','Practical 1','Practical 2','Research Seminar'] %}
+      {% for type in ['lectures'+iday|string,'practicals'+iday|string,'practicals2-'+iday|string,'seminar'+iday|string] %}
+        {% set Tloop = loop.index %}
+        <tr>
+          <td>
+            <span style="color: white;">__</span><span>|______</span>
+          </td>
+          <td>{{Titles[Tloop-1]}}</td>
+          <td></td>
+        </tr>
+        {% set subData1 = data.loc[data['parent']==type] %}
+        {% for index, row in subData1.iterrows() %}
+          <tr>
+            <td></td>
+            <td>
+              <span style="color: white;">__</span><span>|_______________</span>
+            </td>
+            <td>{{row['name']}}</td>
+          </tr>
+        {% endfor %}
+        <tr>
+          <td></td>
+          <td>
+            <span style="color: white;">__</span><span>|_______________</span>
+          </td>
+          <td>
+            <form action=/add-folder/{{workshopID}}/{{type}} method="post">
+              <input type="text" name="folder" required>
+              <input type="submit" value="Add">
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      <tr><td style="color: white;">---</td><td></td><td></td></tr>
+    {% endfor %}
+    <tr>
+      <td>Other</td>
+      <td></td>
+      <td></td>
+    </tr>
+  </table>
+
+{% endblock %}

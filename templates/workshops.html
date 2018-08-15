@@ -19,10 +19,12 @@
     <tr>
       <th>Workshop</th>
       <th></th>
+      <th></th>
     </tr>
     {% for index, row in workshopsData.iterrows() %}
       <tr>
         <td>{{row['workshop']}}</td>
+        <td><a href="/folders/{{row['id']}}" class="btn btn-primary">Edit folder structure</a></td>
         <td>
           <form action=/delete-workshop/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
             <input type="hidden" name="_method" value="DELETE">
