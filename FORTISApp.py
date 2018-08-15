@@ -35,6 +35,32 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 db = SQLAlchemy(app)
 from models import Trainees, Trainers, Workshops, Files, Timetables, Folders
 
+########## GLOBAL VARIABLES ##########
+typeDict={
+    'lectures1': 'Day 1 / Lectures / ',
+    'practicals1': 'Day 1 / Practical 1 /',
+    'practicals2-1': 'Day 1 / Practical 2 / ',
+    'seminar1': 'Day 1 / Research Seminar / ',
+    'lectures2': 'Day 2 / Lectures / ',
+    'practicals2': 'Day 2 / Practical 1 / ',
+    'practicals2-2': 'Day 2 / Practical 2 / ',
+    'seminar2': 'Day 2 / Research Seminar / ',
+    'lectures3': 'Day 3 / Lectures / ',
+    'practicals3': 'Day 3 / Practical 1 / ',
+    'practicals2-3': 'Day 3 / Practical 2 / ',
+    'seminar3': 'Day 3 / Research Seminar / ',
+    'lectures4': 'Day 4 / Lectures / ',
+    'practicals4': 'Day 4 / Practical 1 / ',
+    'practicals2-4': 'Day 4 / Practical 2 / ',
+    'seminar4': 'Day 4 / Research Seminar / ',
+    'lectures5': 'Day 5 / Lectures / ',
+    'practicals5': 'Day 5 / Practical 1 / ',
+    'practicals2-5': 'Day 5 / Practical 2 / ',
+    'seminar5': 'Day 5 / Research Seminar / ',
+    'other': 'Other'
+}
+######################################
+
 ########## PSQL FUNCTIONS ##########
 def psql_to_pandas(query):
     df = pd.read_sql(query.statement,db.session.bind)
@@ -183,6 +209,22 @@ def get_workshop_list():
     for w in workshopDF['workshop']:
         workshopList.append((w,w))
     return workshopList
+
+#Get list of types for Upload Form:
+def get_type_list():
+    typeList=[('blank','--Please select--')]
+    #Add default folders:
+    for key, value in typeDict.items():
+        typeList.append((key,value))
+    #Add custom folders:
+    foldersDF = psql_to_pandas(Folders.query)
+    for index, row in foldersDF.iterrows():
+        key = row['parent']+'_'+row['name']
+        value = typeDict[row['parent']]+row['name']
+        typeList.append((key,value))
+    #Sort by second element:
+    typeList = sorted(typeList, key=lambda tup: tup[1])
+    return typeList
 ####################################
 
 ########## FORM CLASSES ##########
@@ -196,29 +238,7 @@ class UploadForm(Form):
     workshop = SelectField(u'Select the workshop that this material is for',\
         [validators.NoneOf(('blank'),message='Please select')])
     type = SelectField('Select the type of material you are uploading',\
-        [validators.NoneOf(('blank'),message='Please select')],\
-        choices=[('blank','--Please select--'),
-        ('lectures1', 'Lectures (Day 1)'),\
-        ('practicals1', 'Practical 1 (Day 1)'),\
-        ('practicals2-1', 'Practical 2 (Day 1)'),\
-        ('seminar1', 'Research Seminar (Day 1)'),\
-        ('lectures2', 'Lectures (Day 2)'),\
-        ('practicals2', 'Practical 1 (Day 2)'),\
-        ('practicals2-2', 'Practical 2 (Day 2)'),\
-        ('seminar2', 'Research Seminar (Day 2)'),\
-        ('lectures3', 'Lectures (Day 3)'),\
-        ('practicals3', 'Practical 1 (Day 3)'),\
-        ('practicals2-3', 'Practical 2 (Day 3)'),\
-        ('seminar3', 'Research Seminar (Day 3)'),\
-        ('lectures4', 'Lectures (Day 4)'),\
-        ('practicals4', 'Practical 1 (Day 4)'),\
-        ('practicals2-4', 'Practical 2 (Day 4)'),\
-        ('seminar4', 'Research Seminar (Day 4)'),\
-        ('lectures5', 'Lectures (Day 5)'),\
-        ('practicals5', 'Practical 1 (Day 5)'),\
-        ('practicals2-5', 'Practical 2 (Day 5)'),\
-        ('seminar5', 'Research Seminar (Day 5)'),\
-        ('other', 'Other')])
+        [validators.NoneOf(('blank'),message='Please select')])
     who = SelectField('Is the material for trainees (typically non-editable files, e.g. PDFs) or trainers (typically editable files, e.g. PPTs)',\
         [validators.NoneOf(('blank'),message='Please select')],\
         choices=[('blank','--Please select--'),
@@ -368,7 +388,8 @@ def training_material():
     filesData = psql_to_pandas(Files.query)
     workshopDF = psql_to_pandas(Workshops.query)
     workshopList = workshopDF['workshop'].values.tolist()
-    return render_template('material.html',filesData=filesData,workshopList=workshopList,who='trainees',S3_OR_DBX=app.config['S3_OR_DBX'])
+    foldersData = psql_to_pandas(Folders.query)
+    return render_template('material.html',filesData=filesData,foldersData=foldersData,workshopList=workshopList,who='trainees',S3_OR_DBX=app.config['S3_OR_DBX'])
 
 @app.route('/partners')
 def partners():
@@ -384,13 +405,15 @@ def trainer_material():
     filesData = psql_to_pandas(Files.query)
     workshopDF = psql_to_pandas(Workshops.query)
     workshopList = workshopDF['workshop'].values.tolist()
-    return render_template('material.html',filesData=filesData,workshopList=workshopList,who='trainers',S3_OR_DBX=app.config['S3_OR_DBX'])
+    foldersData = psql_to_pandas(Folders.query)
+    return render_template('material.html',filesData=filesData,foldersData=foldersData,workshopList=workshopList,who='trainers',S3_OR_DBX=app.config['S3_OR_DBX'])
 
 @app.route('/upload', methods=["GET","POST"])
 @is_logged_in_as_trainer
 def upload():
     form = UploadForm(request.form)
     form.workshop.choices = get_workshop_list()
+    form.type.choices = get_type_list()
     #If user tries to upload a file
     if request.method == 'POST':
         if form.validate():
@@ -524,6 +547,7 @@ def edit(id,S3_OR_DBX):
     if 'edit' in request.form:
         form = UploadForm()
         form.workshop.choices = get_workshop_list()
+        form.type.choices = get_type_list()
         form.title.data = result.title
         form.description.data = result.description
         form.workshop.data = result.workshop
@@ -533,6 +557,7 @@ def edit(id,S3_OR_DBX):
     else:
         form = UploadForm(request.form)
         form.workshop.choices = get_workshop_list()
+        form.type.choices = get_type_list()
         if form.validate():
             if app.config['S3_OR_DBX'] == 'S3': #Get filename only
                 filename = request.form['filename_s3']
