@@ -199,15 +199,25 @@ class UploadForm(Form):
         [validators.NoneOf(('blank'),message='Please select')],\
         choices=[('blank','--Please select--'),
         ('lectures1', 'Lectures (Day 1)'),\
+        ('practicals1', 'Practical 1 (Day 1)'),\
+        ('practicals2-1', 'Practical 2 (Day 1)'),\
+        ('seminar1', 'Research Seminar (Day 1)'),\
         ('lectures2', 'Lectures (Day 2)'),\
+        ('practicals2', 'Practical 1 (Day 2)'),\
+        ('practicals2-2', 'Practical 2 (Day 2)'),\
+        ('seminar2', 'Research Seminar (Day 2)'),\
         ('lectures3', 'Lectures (Day 3)'),\
+        ('practicals3', 'Practical 1 (Day 3)'),\
+        ('practicals2-3', 'Practical 2 (Day 3)'),\
+        ('seminar3', 'Research Seminar (Day 3)'),\
         ('lectures4', 'Lectures (Day 4)'),\
+        ('practicals4', 'Practical 1 (Day 4)'),\
+        ('practicals2-4', 'Practical 2 (Day 4)'),\
+        ('seminar4', 'Research Seminar (Day 4)'),\
         ('lectures5', 'Lectures (Day 5)'),\
-        ('practicals1', 'Practicals (Day 1)'),\
-        ('practicals2', 'Practicals (Day 2)'),\
-        ('practicals3', 'Practicals (Day 3)'),\
-        ('practicals4', 'Practicals (Day 4)'),\
-        ('practicals5', 'Practicals (Day 5)'),\
+        ('practicals5', 'Practical 1 (Day 5)'),\
+        ('practicals2-5', 'Practical 2 (Day 5)'),\
+        ('seminar5', 'Research Seminar (Day 5)'),\
         ('other', 'Other')])
     who = SelectField('Is the material for trainees (typically non-editable files, e.g. PDFs) or trainers (typically editable files, e.g. PPTs)',\
         [validators.NoneOf(('blank'),message='Please select')],\
