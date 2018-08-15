@@ -11,6 +11,7 @@ from random import randint
 import json
 import sys
 import dropbox
+import mammoth
 
 app = Flask(__name__)
 
@@ -123,7 +124,9 @@ def sign_s3_download_file():
     return json.dumps({
       'url': presigned_url,
     })
+##################################
 
+########## DROPBOX FUNCTIONS ##########
 def upload_file_to_dbx(file,filename):
     dbx = dropbox.Dropbox(app.config['DROPBOX_KEY'])
     response = dbx.files_upload(file.read(),'/'+filename,mute=True)
@@ -583,6 +586,34 @@ def download_timetable(id):
         return send_from_directory('/tmp',filename,as_attachment=True,attachment_filename=filename)
     else:
         abort(404)
+
+#View timetable (Dropbox only; docx files only)
+@app.route('/view-timetable/<string:id>')
+@is_logged_in
+def view_timetable(id):
+    if app.config['S3_OR_DBX'] != 'DBX':
+        abort(403)
+    result = Timetables.query.filter_by(id=id).first()
+    if result is None:
+        abort(404)
+    filename = result.filename
+    #Try to download the timetable from dbx to /tmp if it's not already there:
+    if not os.path.exists('/tmp/'+filename):
+        try:
+            download_file_from_dbx(filename)
+        except:
+            flash("Unable to download timetable","danger")
+            return redirect(url_for('timetables'))
+    #Convert to HTML:
+    try:
+        with open('/tmp/'+filename, "rb") as docx_file:
+            result = mammoth.convert_to_html(docx_file)
+            text = result.value
+            print(text)
+            return text
+    except:
+        flash("Unable to convert to html","danger")
+        return redirect(url_for('timetables'))
 
 #Delete file
 @app.route('/delete-file/<string:id>', methods=['POST'])

@@ -15,6 +15,10 @@
     <tr>
       <td>{{row['workshop']}}</td>
       <td>
+        {% if (S3_OR_DBX == 'DBX') and ('.docx' in row['filename']) %}
+          <a href="/view-timetable/{{row['id']}}" target="_blank" >Click to view</a>
+          <br>
+        {% endif %}
         {% if S3_OR_DBX == 'S3' %}
           <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">Click to download</a>
         {% elif S3_OR_DBX == 'DBX' %}
