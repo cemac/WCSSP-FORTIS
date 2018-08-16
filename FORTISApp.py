@@ -202,22 +202,14 @@ def is_logged_in_as_admin(f):
 #########################################
 
 ########## MISC FUNCTIONS ##########
-#Get list of workshops from workshop DB:
-def get_workshop_list():
-    workshopDF = psql_to_pandas(Workshops.query)
-    workshopList=[('blank','--Please select--')]
-    for w in workshopDF['workshop']:
-        workshopList.append((w,w))
-    return workshopList
-
 #Get list of types for Upload Form:
-def get_type_list():
+def get_type_list(workshop):
     typeList=[('blank','--Please select--')]
     #Add default folders:
     for key, value in typeDict.items():
         typeList.append((key,value))
     #Add custom folders:
-    foldersDF = psql_to_pandas(Folders.query)
+    foldersDF = psql_to_pandas(Folders.query.filter_by(workshop=workshop))
     for index, row in foldersDF.iterrows():
         key = row['parent']+'_'+row['name']
         value = typeDict[row['parent']]+row['name']
@@ -235,8 +227,6 @@ class TimetableForm(Form):
 class UploadForm(Form):
     title = StringField(u'Title of material',[validators.required(),validators.Length(min=1,max=50)])
     description = TextAreaField(u'Description of material',[validators.optional(),validators.Length(max=1000)])
-    workshop = SelectField(u'Select the workshop that this material is for',\
-        [validators.NoneOf(('blank'),message='Please select')])
     type = SelectField('Select the type of material you are uploading',\
         [validators.NoneOf(('blank'),message='Please select')])
     who = SelectField('Is the material for trainees (typically non-editable files, e.g. PDFs) or trainers (typically editable files, e.g. PPTs)',\
@@ -339,7 +329,6 @@ def about():
 @is_logged_in
 def timetables():
     form = TimetableForm(request.form)
-    form.workshop.choices = get_workshop_list()
     timetablesData = psql_to_pandas(Timetables.query)
     #If user tries to upload a timetable
     if request.method == 'POST':
@@ -382,15 +371,6 @@ def timetables():
             flash('Fix form errors and try again', 'danger')
     return render_template('timetables.html',form=form,timetablesData=timetablesData,S3_OR_DBX=app.config['S3_OR_DBX'])
 
-@app.route('/training-material')
-@is_logged_in
-def training_material():
-    filesData = psql_to_pandas(Files.query)
-    workshopDF = psql_to_pandas(Workshops.query)
-    workshopList = workshopDF['workshop'].values.tolist()
-    foldersData = psql_to_pandas(Folders.query)
-    return render_template('material.html',filesData=filesData,foldersData=foldersData,workshopList=workshopList,who='trainees',S3_OR_DBX=app.config['S3_OR_DBX'])
-
 @app.route('/partners')
 def partners():
     return render_template('partners.html')
@@ -399,21 +379,55 @@ def partners():
 def contact_us():
     return render_template('contact-us.html')
 
-@app.route('/trainer-material')
+@app.route('/select-workshop/<string:linkTo>')
 @is_logged_in_as_trainer
-def trainer_material():
-    filesData = psql_to_pandas(Files.query)
-    workshopDF = psql_to_pandas(Workshops.query)
-    workshopList = workshopDF['workshop'].values.tolist()
-    foldersData = psql_to_pandas(Folders.query)
-    return render_template('material.html',filesData=filesData,foldersData=foldersData,workshopList=workshopList,who='trainers',S3_OR_DBX=app.config['S3_OR_DBX'])
+def select_workshop(linkTo):
+    workshopsData = psql_to_pandas(Workshops.query)
+    return render_template('select-workshop.html',workshopsData=workshopsData,linkTo=linkTo)
 
-@app.route('/upload', methods=["GET","POST"])
+@app.route('/training-material/<string:workshopID>')
+@is_logged_in
+def training_material(workshopID):
+    #Check workshop exists:
+    result = Workshops.query.filter_by(id=workshopID).first()
+    if result is None:
+        abort(404)
+    workshop=result.workshop
+    #Subset Files and Folders data:
+    allFilesData = psql_to_pandas(Files.query)
+    filesData = allFilesData.loc[allFilesData['workshop']==workshop]
+    allfoldersData = psql_to_pandas(Folders.query)
+    foldersData = allfoldersData.loc[allfoldersData['workshop']==workshop]
+    return render_template('material.html',filesData=filesData,foldersData=foldersData,
+        workshop=workshop,who='trainees',S3_OR_DBX=app.config['S3_OR_DBX'])
+
+@app.route('/trainer-material/<string:workshopID>')
 @is_logged_in_as_trainer
-def upload():
+def trainer_material(workshopID):
+    #Check workshop exists:
+    result = Workshops.query.filter_by(id=workshopID).first()
+    if result is None:
+        abort(404)
+    workshop=result.workshop
+    #Subset Files and Folders data:
+    allFilesData = psql_to_pandas(Files.query)
+    filesData = allFilesData.loc[allFilesData['workshop']==workshop]
+    allfoldersData = psql_to_pandas(Folders.query)
+    foldersData = allfoldersData.loc[allfoldersData['workshop']==workshop]
+    return render_template('material.html',filesData=filesData,foldersData=foldersData,
+        workshop=workshop,who='trainers',S3_OR_DBX=app.config['S3_OR_DBX'])
+
+@app.route('/upload/<string:workshopID>', methods=["GET","POST"])
+@is_logged_in_as_trainer
+def upload(workshopID):
+    #Check workshop exists:
+    result = Workshops.query.filter_by(id=workshopID).first()
+    if result is None:
+        abort(404)
+    workshop=result.workshop
+    #Prepare form:
     form = UploadForm(request.form)
-    form.workshop.choices = get_workshop_list()
-    form.type.choices = get_type_list()
+    form.type.choices = get_type_list(workshop)
     #If user tries to upload a file
     if request.method == 'POST':
         if form.validate():
@@ -425,7 +439,6 @@ def upload():
             #Get fields from web-form
             title = form.title.data
             description = form.description.data
-            workshop = form.workshop.data
             type = form.type.data
             who = form.who.data
             author = session['username']
@@ -436,7 +449,7 @@ def upload():
                 upload_file_to_dbx(file, filename)
             #flash success message and reload page
             flash('File uploaded successfully', 'success')
-            return redirect(url_for('upload'))
+            return redirect(url_for('upload',workshopID=workshopID))
         else:
             if app.config['S3_OR_DBX'] == 'S3': #Delete file from S3
                 filename_s3 = request.form['filename_s3']
@@ -444,7 +457,8 @@ def upload():
             #Flash error message:
             flash('Fix form errors and try again', 'danger')
     #If user just navigates to page
-    return render_template('upload.html',form=form,S3_OR_DBX=app.config['S3_OR_DBX'])
+    return render_template('upload.html',form=form,workshop=workshop,
+        workshopID=workshopID,S3_OR_DBX=app.config['S3_OR_DBX'])
 
 @app.route('/trainee-accounts', methods=["GET","POST"])
 @is_logged_in_as_trainer
@@ -565,20 +579,18 @@ def edit(id,S3_OR_DBX):
     result = Files.query.filter_by(id=id).first()
     if result is None:
         abort(404)
+    workshop=result.workshop
     if 'edit' in request.form:
         form = UploadForm()
-        form.workshop.choices = get_workshop_list()
-        form.type.choices = get_type_list()
+        form.type.choices = get_type_list(workshop)
         form.title.data = result.title
         form.description.data = result.description
-        form.workshop.data = result.workshop
         form.type.data = result.type
         form.who.data = result.who
         return render_template('edit.html',form=form,id=id,S3_OR_DBX=S3_OR_DBX)
     else:
         form = UploadForm(request.form)
-        form.workshop.choices = get_workshop_list()
-        form.type.choices = get_type_list()
+        form.type.choices = get_type_list(workshop)
         if form.validate():
             if app.config['S3_OR_DBX'] == 'S3': #Get filename only
                 filename = request.form['filename_s3']
@@ -601,13 +613,11 @@ def edit(id,S3_OR_DBX):
             #Get form info:
             title = form.title.data
             description = form.description.data
-            workshop = form.workshop.data
             type = form.type.data
             who = form.who.data
             #Update DB:
             result.title = title
             result.description = description
-            result.workshop = workshop
             result.type = type
             result.who = who
             db.session.commit()

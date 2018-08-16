@@ -4,168 +4,162 @@
   {% set whoFilesData = filesData.loc[filesData['who']==who] %}
   <div class="container">
     <h1>Material for {{who}}</h1>
+    <h3>Workshop: {{workshop}}</h3>
     <hr>
-    {% for workshop in workshopList %}
-      {% set Wloop = loop.index %}
-      {% set workshopFilesData = whoFilesData.loc[whoFilesData['workshop']==workshop] %}
-      {% set workshopFoldersData = foldersData.loc[foldersData['workshop']==workshop] %}
-      <h2>Workshop on {{workshop}}</h2>
-      <div class="panel-group">
-        {% for iday in range(1,6) %}
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            <h4 class="panel-title">
-              <a data-toggle="collapse" href="#collapseW{{Wloop}}D{{iday}}">Day {{iday}}</a>
-            </h4>
-          </div>
-          <div id="collapseW{{Wloop}}D{{iday}}" class="panel-collapse collapse">
-            <div class="panel-body">
-              {% set Titles = ['Lectures','Practical 1','Practical 2','Research Seminar'] %}
-              {% for type in ['lectures','practicals','practicals2-','seminar'] %}
-                {% set typeFilesData = workshopFilesData.loc[workshopFilesData['type']==type+iday|string] %}
-                {% set typeFoldersData = workshopFoldersData.loc[workshopFoldersData['parent']==type+iday|string] %}
-                {% set Tloop = loop.index %}
-                <div class="panel panel-default">
-                  <div class="panel-heading">
-                    <h4 class="panel-title">
-                      <a data-toggle="collapse" href="#collapseW{{Wloop}}D{{iday}}T{{Tloop}}">{{Titles[Tloop-1]}}</a>
-                    </h4>
-                  </div>
-                  <div id="collapseW{{Wloop}}D{{iday}}T{{Tloop}}" class="panel-collapse collapse">
-                    <div class="panel-body">
-                      {% if not typeFoldersData.empty %}
-                        {% for index, row in typeFoldersData.iterrows() %}
-                          {% set subtypeFilesData = workshopFilesData.loc[workshopFilesData['type']==type+iday|string+'_'+row['name']] %}
-                          {% set Floop = loop.index %}
-                          <div class="panel panel-default">
-                            <div class="panel-heading">
-                              <h4 class="panel-title">
-                                <a data-toggle="collapse" href="#collapseW{{Wloop}}D{{iday}}T{{Tloop}}F{{Floop}}">{{row['name']}}</a>
-                              </h4>
-                            </div>
-                            <div id="collapseW{{Wloop}}D{{iday}}T{{Tloop}}F{{Floop}}" class="panel-collapse collapse">
-                              <div class="panel-body">
-                                {% for index, row in subtypeFilesData.iterrows() %}
-                                  <h4>
-                                    {% if S3_OR_DBX == 'S3' %}
-                                      <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">
+    <div class="panel-group">
+      {% for iday in range(1,6) %}
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h4 class="panel-title">
+            <a data-toggle="collapse" href="#collapseD{{iday}}">Day {{iday}}</a>
+          </h4>
+        </div>
+        <div id="collapseD{{iday}}" class="panel-collapse collapse">
+          <div class="panel-body">
+            {% set Titles = ['Lectures','Practical 1','Practical 2','Research Seminar'] %}
+            {% for type in ['lectures','practicals','practicals2-','seminar'] %}
+              {% set typeFilesData = whoFilesData.loc[whoFilesData['type']==type+iday|string] %}
+              {% set typeFoldersData = foldersData.loc[foldersData['parent']==type+iday|string] %}
+              {% set Tloop = loop.index %}
+              <div class="panel panel-default">
+                <div class="panel-heading">
+                  <h4 class="panel-title">
+                    <a data-toggle="collapse" href="#collapseD{{iday}}T{{Tloop}}">{{Titles[Tloop-1]}}</a>
+                  </h4>
+                </div>
+                <div id="collapseD{{iday}}T{{Tloop}}" class="panel-collapse collapse">
+                  <div class="panel-body">
+                    {% if not typeFoldersData.empty %}
+                      {% for index, row in typeFoldersData.iterrows() %}
+                        {% set subtypeFilesData = whoFilesData.loc[whoFilesData['type']==type+iday|string+'_'+row['name']] %}
+                        {% set Floop = loop.index %}
+                        <div class="panel panel-default">
+                          <div class="panel-heading">
+                            <h4 class="panel-title">
+                              <a data-toggle="collapse" href="#collapseD{{iday}}T{{Tloop}}F{{Floop}}">{{row['name']}}</a>
+                            </h4>
+                          </div>
+                          <div id="collapseD{{iday}}T{{Tloop}}F{{Floop}}" class="panel-collapse collapse">
+                            <div class="panel-body">
+                              {% for index, row in subtypeFilesData.iterrows() %}
+                                <h4>
+                                  {% if S3_OR_DBX == 'S3' %}
+                                    <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">
+                                      <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                                      {{row['title']}}
+                                    </a>
+                                  {% elif S3_OR_DBX == 'DBX' %}
+                                    <form action=/download-file/{{row['id']}} method="post">
+                                      <a href="#" onclick="this.parentNode.submit()">
                                         <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
                                         {{row['title']}}
                                       </a>
-                                    {% elif S3_OR_DBX == 'DBX' %}
-                                      <form action=/download-file/{{row['id']}} method="post">
-                                        <a href="#" onclick="this.parentNode.submit()">
-                                          <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                                          {{row['title']}}
-                                        </a>
-                                      </form>
-                                    {% endif %}
-                                    <small>Uploaded by <b>{{row['author']}}</b></small>
-                                  </h4>
-                                  {% if session.username == row['author'] or session.username == 'admin' %}
-                                    <form action=/edit/{{row['id']}}/{{S3_OR_DBX}} method="post" style="display:inline;">
-                                      <input type="submit" name="edit" value="Edit" class="btn btn-primary">
-                                    </form>
-                                    <form action=/delete-file/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');" style="display:inline;">
-                                      <input type="hidden" name="_method" value="DELETE">
-                                      <input type="submit" value="Delete" class="btn btn-danger">
                                     </form>
                                   {% endif %}
-                                  <p style="font-size:18px">{{row['description']}}</p>
-                                  {% if loop.index != subtypeFilesData|length %}
-                                    <hr style="height:2px" />
-                                  {% endif %}
-                                {% endfor %}
-                              </div>
+                                  <small>Uploaded by <b>{{row['author']}}</b></small>
+                                </h4>
+                                {% if session.username == row['author'] or session.username == 'admin' %}
+                                  <form action=/edit/{{row['id']}}/{{S3_OR_DBX}} method="post" style="display:inline;">
+                                    <input type="submit" name="edit" value="Edit" class="btn btn-primary">
+                                  </form>
+                                  <form action=/delete-file/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');" style="display:inline;">
+                                    <input type="hidden" name="_method" value="DELETE">
+                                    <input type="submit" value="Delete" class="btn btn-danger">
+                                  </form>
+                                {% endif %}
+                                <p style="font-size:18px">{{row['description']}}</p>
+                                {% if loop.index != subtypeFilesData|length %}
+                                  <hr style="height:2px" />
+                                {% endif %}
+                              {% endfor %}
                             </div>
                           </div>
-                        {% endfor %}
-                      {% endif %}
-                      {% for index, row in typeFilesData.iterrows() %}
-                        <h4>
-                          {% if S3_OR_DBX == 'S3' %}
-                            <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">
+                        </div>
+                      {% endfor %}
+                    {% endif %}
+                    {% for index, row in typeFilesData.iterrows() %}
+                      <h4>
+                        {% if S3_OR_DBX == 'S3' %}
+                          <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">
+                            <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                            {{row['title']}}
+                          </a>
+                        {% elif S3_OR_DBX == 'DBX' %}
+                          <form action=/download-file/{{row['id']}} method="post">
+                            <a href="#" onclick="this.parentNode.submit()">
                               <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
                               {{row['title']}}
                             </a>
-                          {% elif S3_OR_DBX == 'DBX' %}
-                            <form action=/download-file/{{row['id']}} method="post">
-                              <a href="#" onclick="this.parentNode.submit()">
-                                <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                                {{row['title']}}
-                              </a>
-                            </form>
-                          {% endif %}
-                          <small>Uploaded by <b>{{row['author']}}</b></small>
-                        </h4>
-                        {% if session.username == row['author'] or session.username == 'admin' %}
-                          <form action=/edit/{{row['id']}}/{{S3_OR_DBX}} method="post" style="display:inline;">
-                            <input type="submit" name="edit" value="Edit" class="btn btn-primary">
-                          </form>
-                          <form action=/delete-file/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');" style="display:inline;">
-                            <input type="hidden" name="_method" value="DELETE">
-                            <input type="submit" value="Delete" class="btn btn-danger">
                           </form>
                         {% endif %}
-                        <p style="font-size:18px">{{row['description']}}</p>
-                        {% if loop.index != typeFilesData|length %}
-                          <hr style="height:2px" />
-                        {% endif %}
-                      {% endfor %}
-                    </div>
+                        <small>Uploaded by <b>{{row['author']}}</b></small>
+                      </h4>
+                      {% if session.username == row['author'] or session.username == 'admin' %}
+                        <form action=/edit/{{row['id']}}/{{S3_OR_DBX}} method="post" style="display:inline;">
+                          <input type="submit" name="edit" value="Edit" class="btn btn-primary">
+                        </form>
+                        <form action=/delete-file/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');" style="display:inline;">
+                          <input type="hidden" name="_method" value="DELETE">
+                          <input type="submit" value="Delete" class="btn btn-danger">
+                        </form>
+                      {% endif %}
+                      <p style="font-size:18px">{{row['description']}}</p>
+                      {% if loop.index != typeFilesData|length %}
+                        <hr style="height:2px" />
+                      {% endif %}
+                    {% endfor %}
                   </div>
                 </div>
-              {% endfor %}
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            <h4 class="panel-title">
-              <a data-toggle="collapse" href="#collapseW{{Wloop}}D0">Other</a>
-            </h4>
-          </div>
-          <div id="collapseW{{Wloop}}D0" class="panel-collapse collapse">
-            <div class="panel-body">
-              {% set otherFilesData = workshopFilesData.loc[workshopFilesData['type']=='other'] %}
-              {% for index, row in otherFilesData.iterrows() %}
-                <h4>
-                  {% if S3_OR_DBX == 'S3' %}
-                    <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">
-                      <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                      {{row['title']}}
-                    </a>
-                  {% elif S3_OR_DBX == 'DBX' %}
-                    <form action=/download-file/{{row['id']}} method="post">
-                      <a href="#" onclick="this.parentNode.submit()">
-                        <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-                        {{row['title']}}
-                      </a>
-                    </form>
-                  {% endif %}
-                  <small>Uploaded by <b>{{row['author']}}</b></small>
-                </h4>
-                {% if session.username == row['author'] or session.username == 'admin' %}
-                  <form action=/edit/{{row['id']}}/{{S3_OR_DBX}} method="post" style="display:inline;">
-                    <input type="submit" name="edit" value="Edit" class="btn btn-primary">
-                  </form>
-                  <form action=/delete-file/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');" style="display:inline;">
-                    <input type="hidden" name="_method" value="DELETE">
-                    <input type="submit" value="Delete" class="btn btn-danger">
-                  </form>
-                {% endif %}
-                <p style="font-size:18px">{{row['description']}}</p>
-                {% if loop.index != otherFilesData|length %}
-                  <hr style="height:2px" />
-                {% endif %}
-              {% endfor %}
-            </div>
+              </div>
+            {% endfor %}
           </div>
         </div>
       </div>
-      <hr>
-    {% endfor %}
+      {% endfor %}
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h4 class="panel-title">
+            <a data-toggle="collapse" href="#collapseD0">Other</a>
+          </h4>
+        </div>
+        <div id="collapseD0" class="panel-collapse collapse">
+          <div class="panel-body">
+            {% set otherFilesData = whoFilesData.loc[whoFilesData['type']=='other'] %}
+            {% for index, row in otherFilesData.iterrows() %}
+              <h4>
+                {% if S3_OR_DBX == 'S3' %}
+                  <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">
+                    <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                    {{row['title']}}
+                  </a>
+                {% elif S3_OR_DBX == 'DBX' %}
+                  <form action=/download-file/{{row['id']}} method="post">
+                    <a href="#" onclick="this.parentNode.submit()">
+                      <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+                      {{row['title']}}
+                    </a>
+                  </form>
+                {% endif %}
+                <small>Uploaded by <b>{{row['author']}}</b></small>
+              </h4>
+              {% if session.username == row['author'] or session.username == 'admin' %}
+                <form action=/edit/{{row['id']}}/{{S3_OR_DBX}} method="post" style="display:inline;">
+                  <input type="submit" name="edit" value="Edit" class="btn btn-primary">
+                </form>
+                <form action=/delete-file/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');" style="display:inline;">
+                  <input type="hidden" name="_method" value="DELETE">
+                  <input type="submit" value="Delete" class="btn btn-danger">
+                </form>
+              {% endif %}
+              <p style="font-size:18px">{{row['description']}}</p>
+              {% if loop.index != otherFilesData|length %}
+                <hr style="height:2px" />
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 {% endblock %}
 

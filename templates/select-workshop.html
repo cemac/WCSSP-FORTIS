@@ -1,0 +1,14 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+  <h1>Select workshop for {{linkTo}}</h1>
+  <hr>
+  <table class="table table-striped">
+    {% for index, row in workshopsData.iterrows() %}
+      <tr>
+        <td><a href="/{{linkTo}}/{{row['id']}}">{{row['workshop']}}</a></td>
+      </tr>
+    {% endfor %}
+  </table>
+
+{% endblock %}

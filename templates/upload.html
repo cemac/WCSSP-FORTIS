@@ -2,6 +2,7 @@
 
 {% block body %}
   <h1>Upload new material</h1>
+  <h3>Workshop: {{workshop}}</h3>
   <hr>
   <p><b>Browse to select a file to upload</b></p>
   <p>
@@ -30,7 +31,7 @@
   {% endif %}
 
   {% from "includes/_formhelpers.html" import render_field %}
-  <form role="form" method="POST" action=/upload enctype="multipart/form-data">
+  <form role="form" method="POST" action=/upload/{{workshopID}} enctype="multipart/form-data">
     {% if S3_OR_DBX == 'S3' %}
       <input type="hidden" id="filename_s3" name="filename_s3" value="">
     {% elif S3_OR_DBX == 'DBX' %}
@@ -41,8 +42,6 @@
       {{render_field(form.title, class_="form-control", placeholder="e.g.'Tropical cyclone track forecasting'. This is the name the trainees will see.")}}
       <br>
       {{render_field(form.description, class_="form-control", placeholder="(Optional) Add a short description of the material's content")}}
-      <br>
-      {{render_field(form.workshop, class_="form-control")}}
       <br>
       {{render_field(form.type, class_="form-control")}}
       <br>
