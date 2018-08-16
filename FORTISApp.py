@@ -202,6 +202,14 @@ def is_logged_in_as_admin(f):
 #########################################
 
 ########## MISC FUNCTIONS ##########
+#Get list of workshops from workshop DB:
+def get_workshop_list():
+    workshopDF = psql_to_pandas(Workshops.query)
+    workshopList=[('blank','--Please select--')]
+    for w in workshopDF['workshop']:
+        workshopList.append((w,w))
+    return workshopList
+
 #Get list of types for Upload Form:
 def get_type_list(workshop):
     typeList=[('blank','--Please select--')]
@@ -329,6 +337,7 @@ def about():
 @is_logged_in
 def timetables():
     form = TimetableForm(request.form)
+    form.workshop.choices = get_workshop_list()
     timetablesData = psql_to_pandas(Timetables.query)
     #If user tries to upload a timetable
     if request.method == 'POST':
