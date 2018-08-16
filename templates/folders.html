@@ -29,7 +29,13 @@
             <td>
               <span style="color: white;">__</span><span>|_______________</span>
             </td>
-            <td>{{row['name']}}</td>
+            <td>
+              {{row['name']}}
+              <form action=/delete-folder/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');" style="display:inline;">
+                <input type="hidden" name="_method" value="DELETE">
+                <input type="submit" value="Delete">
+              </form>
+            </td>
           </tr>
         {% endfor %}
         <tr>

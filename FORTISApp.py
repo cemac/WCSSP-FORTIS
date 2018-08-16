@@ -538,6 +538,27 @@ def add_folder(id,parent):
     dummy = psql_insert(db_row)
     return redirect(url_for('folders',id=id))
 
+@app.route('/delete-folder/<string:id>', methods=["POST"])
+@is_logged_in_as_admin
+def delete_folder(id):
+    #Retrieve folder:
+    folder = Folders.query.filter_by(id=id).first()
+    if folder is None:
+        abort(404)
+    #Retrieve workshop id:
+    workshop = folder.workshop
+    workshopID = Workshops.query.filter_by(workshop=workshop).first().id
+    #Check folder is empty:
+    type = folder.parent+'_'+folder.name
+    filesInFolder = Files.query.filter_by(workshop=workshop,type=type).first()
+    if filesInFolder is not None:
+        flash("Cannot delete folder until it is empty (check both trainee and trainer material)","danger")
+        return redirect(url_for('folders',id=workshopID))
+    #Delete from DB:
+    psql_delete(folder)
+    flash("Folder deleted","success")
+    return redirect(url_for('folders',id=workshopID))
+
 @app.route('/edit/<string:id>/<string:S3_OR_DBX>', methods=["POST"])
 @is_logged_in_as_trainer
 def edit(id,S3_OR_DBX):
