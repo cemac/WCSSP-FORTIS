@@ -7,9 +7,28 @@
 
  <h1> <center> WCSSP FORTIS teaching app </center> </h1>
 
-[![GitHub release](https://img.shields.io/badge/release-v.1.0-blue.svg)](https://github.com/cemac/WCSSP-FORTIS/releases/tag/1.0)
+<!--- release table --->
+|  Version            | Release          |
+|---------------------|------------------|
+| **Current Stable**  | [![GitHubrelease](https://img.shields.io/badge/release-v.1.0-blue.svg)](https://github.com/cemac/WCSSP-FORTIS/releases/tag/1.0)|
+| **2019**            | *coming soon*    |
+<!--- table --->
 
 Repository for the [WCSSP FORTIS](https://www.metoffice.gov.uk/research/collaboration/newton/wcssp-se-asia/wp3) training tool. [(fortis-training.herokuapp.com)](http://fortis-training.herokuapp.com).
+
+<hr>
+
+## Requirements
+
+*see Pipfile*
+
+## Installation
+
+*coming soon*
+
+<hr>
+
+## Usage
 
 After any required setup steps, run this app locally using:
 $ python manage.py runserver
@@ -34,5 +53,28 @@ To make changes to the GitHub repo:
   - It is then good practice to delete the branch in both the remote forked repo (can be done via GitHub) and the local forked repo:
     $ git branch -d branchName
 
+<hr>
+
+## Hosting
+
 To make any code changes take effect on Heroku:
 $ git push heroku master
+
+
+## Backups
+
+*coming soon*
+
+## Flask App Custom features
+
+*coming soon*
+
+<hr>
+
+## License Information
+
+This code is currently licensed under the [MIT license](https://choosealicense.com/licenses/mit/).
+
+## Acknowledgements
+
+*coming soon*
