@@ -9,7 +9,7 @@
 
 [![GitHub release](https://img.shields.io/badge/release-v.1.1-blue.svg)](https://github.com/cemac/WCSSP-FORTIS/releases/tag/1.1)
 
-Repository for the [WCSSP FORTIS](https://www.metoffice.gov.uk/research/collaboration/newton/wcssp-se-asia/wp3) training tool. [(fortis-training.herokuapp.com)](http://fortis-training.herokuapp.com).
+Repository for the [WCSSP FORTIS](https://www.metoffice.gov.uk/research/collaboration/newton/wcssp-se-asia/wp3) training tool. [(fortis-training)](http://fortis-training.herokuapp.com).
 
 After any required setup steps, run this app locally using:
 $ python manage.py runserver
