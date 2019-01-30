@@ -1,3 +1,16 @@
+<div align="center">
+<a href="https://www.cemac.leeds.ac.uk/">
+  <img src="https://github.com/cemac/cemac_generic/blob/master/Images/cemac.png"></a>
+  <br>
+</div>
+
+
+ <h1> <center> WCSSP FORTIS teaching app </center> </h1>
+
+[![GitHub release](https://img.shields.io/badge/release-v.1.1-blue.svg)](https://github.com/cemac/SWIFTDB/releases/tag/1.1)
+
+Repository for the [WCSSP FORTIS](https://www.metoffice.gov.uk/research/collaboration/newton/wcssp-se-asia/wp3) training tool. (fortis-training)](http://fortis-training.herokuapp.com). 
+
 After any required setup steps, run this app locally using:
 $ python manage.py runserver
 and go to localhost:5000 in a web browser
