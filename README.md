@@ -30,7 +30,13 @@ Repository for the [WCSSP FORTIS](https://www.metoffice.gov.uk/research/collabor
 
 ## Usage
 
-*coming soon*
+```bash
+git clone repo.git
+cd repo
+source .env
+python manage.py db upgrade
+python manage runserver
+```
 
 <hr>
 
