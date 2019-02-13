@@ -1,3 +1,4 @@
+from models import Trainees, Trainers, Workshops, Files, Timetables, Folders
 from flask import Flask, render_template, flash, redirect, url_for, request, g, session, abort, send_from_directory
 from wtforms import Form, validators, StringField, TextAreaField, SelectField, PasswordField
 from werkzeug.utils import secure_filename
@@ -15,7 +16,7 @@ import mammoth
 
 app = Flask(__name__)
 
-#Set config variables:
+# Set config variables:
 assert "APP_SETTINGS" in os.environ, "APP_SETTINGS environment variable not set"
 assert "SECRET_KEY" in os.environ, "SECRET_KEY environment variable not set"
 assert "ADMIN_PWD" in os.environ, "ADMIN_PWD environment variable not set"
@@ -31,12 +32,11 @@ else:
     sys.exit("Variable S3_OR_DBX not set correctly")
 app.config.from_object(os.environ['APP_SETTINGS'])
 
-#Configure postgresql database:
+# Configure postgresql database:
 db = SQLAlchemy(app)
-from models import Trainees, Trainers, Workshops, Files, Timetables, Folders
 
-########## GLOBAL VARIABLES ##########
-typeDict={
+# ######### GLOBAL VARIABLES ##########
+typeDict = {
     'lectures1': 'Day 1 / Lectures / ',
     'practicals1': 'Day 1 / Practical 1 /',
     'practicals2-1': 'Day 1 / Practical 2 / ',
@@ -61,15 +61,19 @@ typeDict={
 }
 ######################################
 
-########## PSQL FUNCTIONS ##########
+# ######### PSQL FUNCTIONS ##########
+
+
 def psql_to_pandas(query):
-    df = pd.read_sql(query.statement,db.session.bind)
+    df = pd.read_sql(query.statement, db.session.bind)
     return df
+
 
 def psql_insert(row):
     db.session.add(row)
     db.session.commit()
     return row.id
+
 
 def psql_delete(row):
     db.session.delete(row)
@@ -77,34 +81,39 @@ def psql_delete(row):
     return
 ####################################
 
-########## S3 FUNCTIONS/ROUTES ##########
+# ######### S3 FUNCTIONS/ROUTES ##########
+
+
 def delete_file_from_s3(filename):
     bucket_name = app.config['S3_BUCKET']
-    s3 = boto3.resource('s3','eu-west-2')
-    s3.Object(bucket_name,filename).delete()
+    s3 = boto3.resource('s3', 'eu-west-2')
+    s3.Object(bucket_name, filename).delete()
     return
+
 
 @app.route('/sign_s3/')
 def sign_s3():
     bucket_name = app.config['S3_BUCKET']
     filename_orig = request.args.get('file_name')
-    filename_s3 = str(randint(10000,99999)) + '_' + secure_filename(filename_orig)
+    filename_s3 = str(randint(10000, 99999)) + '_' + \
+        secure_filename(filename_orig)
     file_type = request.args.get('file_type')
-    s3 = boto3.client('s3','eu-west-2')
+    s3 = boto3.client('s3', 'eu-west-2')
     presigned_post = s3.generate_presigned_post(
-      Bucket = bucket_name,
-      Key = filename_s3,
-      Fields = {"acl": "private", "Content-Type": file_type},
-      Conditions = [
-        {"acl": "private"},
-        {"Content-Type": file_type}
-      ],
-      ExpiresIn = 3600
+        Bucket=bucket_name,
+        Key=filename_s3,
+        Fields={"acl": "private", "Content-Type": file_type},
+        Conditions=[
+            {"acl": "private"},
+            {"Content-Type": file_type}
+        ],
+        ExpiresIn=3600
     )
     return json.dumps({
-      'data': presigned_post,
-      'url': 'https://%s.s3.eu-west-2.amazonaws.com/%s' % (bucket_name, filename_s3)
+        'data': presigned_post,
+        'url': 'https://%s.s3.eu-west-2.amazonaws.com/%s' % (bucket_name, filename_s3)
     })
+
 
 @app.route('/sign_s3_download_timetable/')
 def sign_s3_download_timetable():
@@ -113,19 +122,20 @@ def sign_s3_download_timetable():
     # Retrieve s3 filename from DB:
     db_entry = Timetables.query.filter_by(id=id).first()
     filename_s3 = db_entry.filename
-    #Access granting:
+    # Access granting:
     if not 'logged_in' in session:
         abort(403)
     # Create and return pre-signed url:
-    s3 = boto3.client('s3','eu-west-2')
+    s3 = boto3.client('s3', 'eu-west-2')
     presigned_url = s3.generate_presigned_url(
-      'get_object',
-      Params = {'Bucket': bucket_name, 'Key': filename_s3},
-      ExpiresIn = 3600
+        'get_object',
+        Params={'Bucket': bucket_name, 'Key': filename_s3},
+        ExpiresIn=3600
     )
     return json.dumps({
-      'url': presigned_url,
+        'url': presigned_url,
     })
+
 
 @app.route('/sign_s3_download_file/')
 def sign_s3_download_file():
@@ -134,40 +144,46 @@ def sign_s3_download_file():
     # Retrieve s3 filename from DB:
     db_entry = Files.query.filter_by(id=id).first()
     filename_s3 = db_entry.filename
-    #Access granting:
+    # Access granting:
     who = db_entry.who
     if not 'logged_in' in session:
         abort(403)
-    if who=='trainers' and session['usertype']=='trainee':
+    if who == 'trainers' and session['usertype'] == 'trainee':
         abort(403)
     # Create and return pre-signed url:
-    s3 = boto3.client('s3','eu-west-2')
+    s3 = boto3.client('s3', 'eu-west-2')
     presigned_url = s3.generate_presigned_url(
-      'get_object',
-      Params = {'Bucket': bucket_name, 'Key': filename_s3},
-      ExpiresIn = 3600
+        'get_object',
+        Params={'Bucket': bucket_name, 'Key': filename_s3},
+        ExpiresIn=3600
     )
     return json.dumps({
-      'url': presigned_url,
+        'url': presigned_url,
     })
 ##################################
 
-########## DROPBOX FUNCTIONS ##########
-def upload_file_to_dbx(file,filename):
+# ######### DROPBOX FUNCTIONS ##########
+
+
+def upload_file_to_dbx(file, filename):
     dbx = dropbox.Dropbox(app.config['DROPBOX_KEY'])
-    response = dbx.files_upload(file.read(),'/'+filename,mute=True)
+    response = dbx.files_upload(file.read(), '/' + filename, mute=True)
+
 
 def download_file_from_dbx(filename):
     dbx = dropbox.Dropbox(app.config['DROPBOX_KEY'])
-    response = dbx.files_download_to_file('/tmp/'+filename,'/'+filename)
+    response = dbx.files_download_to_file('/tmp/' + filename, '/' + filename)
+
 
 def delete_file_from_dbx(filename):
     dbx = dropbox.Dropbox(app.config['DROPBOX_KEY'])
-    response = dbx.files_delete('/'+filename)
+    response = dbx.files_delete('/' + filename)
 ##################################
 
-########## LOGGED-IN FUNCTIONS ##########
-#Check if user is logged in
+# ######### LOGGED-IN FUNCTIONS ##########
+# Check if user is logged in
+
+
 def is_logged_in(f):
     @wraps(f)
     def wrap(*args, **kwargs):
@@ -178,22 +194,26 @@ def is_logged_in(f):
             return redirect(url_for('index'))
     return wrap
 
-#Check if user is logged in as a trainer/admin
+# Check if user is logged in as a trainer/admin
+
+
 def is_logged_in_as_trainer(f):
     @wraps(f)
     def wrap(*args, **kwargs):
-        if 'logged_in' in session and (session['usertype']=='trainer' or session['usertype']=='admin'):
+        if 'logged_in' in session and (session['usertype'] == 'trainer' or session['usertype'] == 'admin'):
             return f(*args, **kwargs)
         else:
             flash('Unauthorised, please login as a trainer/admin', 'danger')
             return redirect(url_for('index'))
     return wrap
 
-#Check if user is logged in as admin
+# Check if user is logged in as admin
+
+
 def is_logged_in_as_admin(f):
     @wraps(f)
     def wrap(*args, **kwargs):
-        if 'logged_in' in session and session['usertype']=='admin':
+        if 'logged_in' in session and session['usertype'] == 'admin':
             return f(*args, **kwargs)
         else:
             flash('Unauthorised, please login as admin', 'danger')
@@ -202,92 +222,106 @@ def is_logged_in_as_admin(f):
 #########################################
 
 ########## MISC FUNCTIONS ##########
-#Get list of workshops from workshop DB:
+# Get list of workshops from workshop DB:
+
+
 def get_workshop_list():
     workshopDF = psql_to_pandas(Workshops.query)
-    workshopList=[('blank','--Please select--')]
+    workshopList = [('blank', '--Please select--')]
     for w in workshopDF['workshop']:
-        workshopList.append((w,w))
+        workshopList.append((w, w))
     return workshopList
 
-#Get list of types for Upload Form:
+# Get list of types for Upload Form:
+
+
 def get_type_list(workshop):
-    typeList=[('blank','--Please select--')]
-    #Add default folders:
+    typeList = [('blank', '--Please select--')]
+    # Add default folders:
     for key, value in typeDict.items():
-        typeList.append((key,value))
-    #Add custom folders:
+        typeList.append((key, value))
+    # Add custom folders:
     foldersDF = psql_to_pandas(Folders.query.filter_by(workshop=workshop))
     for index, row in foldersDF.iterrows():
-        key = row['parent']+'_'+row['name']
-        value = typeDict[row['parent']]+row['name']
-        typeList.append((key,value))
-    #Sort by second element:
+        key = row['parent'] + '_' + row['name']
+        value = typeDict[row['parent']] + row['name']
+        typeList.append((key, value))
+    # Sort by second element:
     typeList = sorted(typeList, key=lambda tup: tup[1])
     return typeList
 ####################################
 
-########## FORM CLASSES ##########
+# ######### FORM CLASSES ##########
+
+
 class TimetableForm(Form):
-    workshop = SelectField(u'Select the workshop that this timetable is for',\
-        [validators.NoneOf(('blank'),message='Please select')])
+    workshop = SelectField(u'Select the workshop that this timetable is for',
+                           [validators.NoneOf(('blank'), message='Please select')])
+
 
 class UploadForm(Form):
-    title = StringField(u'Title of material',[validators.required(),validators.Length(min=1,max=50)])
-    description = TextAreaField(u'Description of material',[validators.optional(),validators.Length(max=1000)])
-    type = SelectField('Select the type of material you are uploading',\
-        [validators.NoneOf(('blank'),message='Please select')])
-    who = SelectField('Is the material for trainees (typically non-editable files, e.g. PDFs) or trainers (typically editable files, e.g. PPTs)',\
-        [validators.NoneOf(('blank'),message='Please select')],\
-        choices=[('blank','--Please select--'),
-        ('trainees', 'Trainees'),\
-        ('trainers', 'Trainers')])
+    title = StringField(u'Title of material', [
+                        validators.required(), validators.Length(min=1, max=50)])
+    description = TextAreaField(u'Description of material', [
+                                validators.optional(), validators.Length(max=1000)])
+    type = SelectField('Select the type of material you are uploading',
+                       [validators.NoneOf(('blank'), message='Please select')])
+    who = SelectField('Is the material for trainees (typically non-editable files, e.g. PDFs) or trainers (typically editable files, e.g. PPTs)',
+                      [validators.NoneOf(('blank'), message='Please select')],
+                      choices=[('blank', '--Please select--'),
+                               ('trainees', 'Trainees'),
+                               ('trainers', 'Trainers')])
+
 
 class RegisterForm(Form):
     username = StringField('Username',
-        [validators.Regexp('^trainee-[0-9]{2}$',
-        message='Username must be of the form trainee-XX where XX is a two-digit number')])
+                           [validators.Regexp('^trainee-[0-9]{2}$',
+                                              message='Username must be of the form trainee-XX where XX is a two-digit number')])
     password = PasswordField('Password',
-        [validators.Regexp('^([a-zA-Z0-9]{8,})$',
-        message='Password must be mimimum 8 characters and contain only uppercase letters, \
+                             [validators.Regexp('^([a-zA-Z0-9]{8,})$',
+                                                message='Password must be mimimum 8 characters and contain only uppercase letters, \
         lowercase letters and numbers')])
 
+
 class RegisterTrainerForm(Form):
-    username = StringField('Username',[validators.Length(min=4, max=25)])
+    username = StringField('Username', [validators.Length(min=4, max=25)])
     password = PasswordField('Password',
-        [validators.Regexp('^([a-zA-Z0-9]{8,})$',
-        message='Password must be mimimum 8 characters and contain only uppercase letters, \
+                             [validators.Regexp('^([a-zA-Z0-9]{8,})$',
+                                                message='Password must be mimimum 8 characters and contain only uppercase letters, \
         lowercase letters and numbers')])
+
 
 class ChangePwdForm(Form):
     current = PasswordField('Current password',
-        [validators.DataRequired()])
+                            [validators.DataRequired()])
     new = PasswordField('New password',
-        [validators.Regexp('^([a-zA-Z0-9]{8,})$',
-        message='Password must be mimimum 8 characters and contain only uppercase letters, \
+                        [validators.Regexp('^([a-zA-Z0-9]{8,})$',
+                                           message='Password must be mimimum 8 characters and contain only uppercase letters, \
         lowercase letters and numbers')])
     confirm = PasswordField('Confirm new password',
-        [validators.EqualTo('new', message='Passwords do no match')])
+                            [validators.EqualTo('new', message='Passwords do no match')])
 ##################################
 
-#####################################
-########## START OF ROUTES ##########
-#####################################
+# ####################################
+# ######### START OF ROUTES ##########
+# ####################################
 
-#Index
-@app.route('/', methods=["GET","POST"])
+# Index
+
+
+@app.route('/', methods=["GET", "POST"])
 def index():
     if request.method == 'POST':
-        #Get form fields
+        # Get form fields
         username = request.form['username']
         password_candidate = request.form['password']
-        #Check trainee accounts first:
+        # Check trainee accounts first:
         user = Trainees.query.filter_by(username=username).first()
         if user is not None:
             password = user.password
-            #Compare passwords
+            # Compare passwords
             if password_candidate == password:
-                #Passed
+                # Passed
                 session['logged_in'] = True
                 session['username'] = username
                 session['usertype'] = 'trainee'
@@ -296,13 +330,13 @@ def index():
             else:
                 flash('Incorrect password', 'danger')
                 return redirect(url_for('index'))
-        #Check trainer accounts next:
+        # Check trainer accounts next:
         user = Trainers.query.filter_by(username=username).first()
         if user is not None:
             password = user.password
-            #Compare passwords
+            # Compare passwords
             if sha256_crypt.verify(password_candidate, password):
-                #Passed
+                # Passed
                 session['logged_in'] = True
                 session['username'] = username
                 session['usertype'] = 'trainer'
@@ -311,11 +345,11 @@ def index():
             else:
                 flash('Incorrect password', 'danger')
                 return redirect(url_for('index'))
-        #Finally check admin account:
+        # Finally check admin account:
         if username == 'admin':
             password = app.config['ADMIN_PWD']
             if password_candidate == password:
-                #Passed
+                # Passed
                 session['logged_in'] = True
                 session['username'] = 'admin'
                 session['usertype'] = 'admin'
@@ -324,178 +358,192 @@ def index():
             else:
                 flash('Incorrect password', 'danger')
                 return redirect(url_for('index'))
-        #Username not found:
+        # Username not found:
         flash('Username not found', 'danger')
         return redirect(url_for('index'))
     return render_template('home.html')
+
 
 @app.route('/about')
 def about():
     return render_template('about.html')
 
-@app.route('/timetables', methods=["GET","POST"])
+
+@app.route('/timetables', methods=["GET", "POST"])
 @is_logged_in
 def timetables():
     form = TimetableForm(request.form)
     form.workshop.choices = get_workshop_list()
     timetablesData = psql_to_pandas(Timetables.query)
-    #If user tries to upload a timetable
+    # If user tries to upload a timetable
     if request.method == 'POST':
         if form.validate():
-            if app.config['S3_OR_DBX'] == 'S3': #Get filename only
+            if app.config['S3_OR_DBX'] == 'S3':  # Get filename only
                 filename = request.form['filename_s3']
-            else: #Also get file
+            else:  # Also get file
                 file = request.files['file']
-                filename = str(randint(10000,99999)) + '_' + secure_filename(file.filename)
-            #Get fields from web-form
+                filename = str(randint(10000, 99999)) + '_' + \
+                    secure_filename(file.filename)
+            # Get fields from web-form
             workshop = form.workshop.data
             author = session['username']
-            #Delete old timetable if it exists:
+            # Delete old timetable if it exists:
             timetable = Timetables.query.filter_by(workshop=workshop).first()
             if timetable is not None:
-                old_filename=timetable.filename
-                #Delete from DB:
+                old_filename = timetable.filename
+                # Delete from DB:
                 psql_delete(timetable)
-                #Delete from cloud:
+                # Delete from cloud:
                 try:
                     if app.config['S3_OR_DBX'] == 'S3':
                         delete_file_from_s3(old_filename)
                     else:
                         delete_file_from_dbx(old_filename)
                 except:
-                    flash("Unable to delete timetable from cloud","warning")
-            #Insert new timetable into database:
-            db_row = Timetables(filename=filename,workshop=workshop,author=author)
+                    flash("Unable to delete timetable from cloud", "warning")
+            # Insert new timetable into database:
+            db_row = Timetables(filename=filename,
+                                workshop=workshop, author=author)
             id = psql_insert(db_row)
-            if app.config['S3_OR_DBX'] == 'DBX': #Save file to dropbox
+            if app.config['S3_OR_DBX'] == 'DBX':  # Save file to dropbox
                 upload_file_to_dbx(file, filename)
-            #flash success message and reload page
+            # flash success message and reload page
             flash('Timetable uploaded successfully', 'success')
             return redirect(url_for('timetables'))
         else:
-            if app.config['S3_OR_DBX'] == 'S3': #Delete file from S3
+            if app.config['S3_OR_DBX'] == 'S3':  # Delete file from S3
                 filename_s3 = request.form['filename_s3']
                 delete_file_from_s3(filename_s3)
-            #Flash error message:
+            # Flash error message:
             flash('Fix form errors and try again', 'danger')
-    return render_template('timetables.html',form=form,timetablesData=timetablesData,S3_OR_DBX=app.config['S3_OR_DBX'])
+    return render_template('timetables.html', form=form, timetablesData=timetablesData, S3_OR_DBX=app.config['S3_OR_DBX'])
+
 
 @app.route('/partners')
 def partners():
     return render_template('partners.html')
 
+
 @app.route('/contact-us')
 def contact_us():
     return render_template('contact-us.html')
+
 
 @app.route('/select-workshop/<string:linkTo>')
 @is_logged_in_as_trainer
 def select_workshop(linkTo):
     workshopsData = psql_to_pandas(Workshops.query)
-    return render_template('select-workshop.html',workshopsData=workshopsData,linkTo=linkTo)
+    return render_template('select-workshop.html', workshopsData=workshopsData, linkTo=linkTo)
+
 
 @app.route('/training-material/<string:workshopID>')
 @is_logged_in
 def training_material(workshopID):
-    #Check workshop exists:
+    # Check workshop exists:
     result = Workshops.query.filter_by(id=workshopID).first()
     if result is None:
         abort(404)
-    workshop=result.workshop
-    #Subset Files and Folders data:
+    workshop = result.workshop
+    # Subset Files and Folders data:
     allFilesData = psql_to_pandas(Files.query)
-    filesData = allFilesData.loc[allFilesData['workshop']==workshop]
+    filesData = allFilesData.loc[allFilesData['workshop'] == workshop]
     allfoldersData = psql_to_pandas(Folders.query)
-    foldersData = allfoldersData.loc[allfoldersData['workshop']==workshop]
-    return render_template('material.html',filesData=filesData,foldersData=foldersData,
-        workshop=workshop,who='trainees',S3_OR_DBX=app.config['S3_OR_DBX'])
+    foldersData = allfoldersData.loc[allfoldersData['workshop'] == workshop]
+    return render_template('material.html', filesData=filesData, foldersData=foldersData,
+                           workshop=workshop, who='trainees', S3_OR_DBX=app.config['S3_OR_DBX'])
+
 
 @app.route('/trainer-material/<string:workshopID>')
 @is_logged_in_as_trainer
 def trainer_material(workshopID):
-    #Check workshop exists:
+    # Check workshop exists:
     result = Workshops.query.filter_by(id=workshopID).first()
     if result is None:
         abort(404)
-    workshop=result.workshop
-    #Subset Files and Folders data:
+    workshop = result.workshop
+    # Subset Files and Folders data:
     allFilesData = psql_to_pandas(Files.query)
-    filesData = allFilesData.loc[allFilesData['workshop']==workshop]
+    filesData = allFilesData.loc[allFilesData['workshop'] == workshop]
     allfoldersData = psql_to_pandas(Folders.query)
-    foldersData = allfoldersData.loc[allfoldersData['workshop']==workshop]
-    return render_template('material.html',filesData=filesData,foldersData=foldersData,
-        workshop=workshop,who='trainers',S3_OR_DBX=app.config['S3_OR_DBX'])
+    foldersData = allfoldersData.loc[allfoldersData['workshop'] == workshop]
+    return render_template('material.html', filesData=filesData, foldersData=foldersData,
+                           workshop=workshop, who='trainers', S3_OR_DBX=app.config['S3_OR_DBX'])
 
-@app.route('/upload/<string:workshopID>', methods=["GET","POST"])
+
+@app.route('/upload/<string:workshopID>', methods=["GET", "POST"])
 @is_logged_in_as_trainer
 def upload(workshopID):
-    #Check workshop exists:
+    # Check workshop exists:
     result = Workshops.query.filter_by(id=workshopID).first()
     if result is None:
         abort(404)
-    workshop=result.workshop
-    #Prepare form:
+    workshop = result.workshop
+    # Prepare form:
     form = UploadForm(request.form)
     form.type.choices = get_type_list(workshop)
-    #If user tries to upload a file
+    # If user tries to upload a file
     if request.method == 'POST':
         if form.validate():
-            if app.config['S3_OR_DBX'] == 'S3': #Get filename only
+            if app.config['S3_OR_DBX'] == 'S3':  # Get filename only
                 filename = request.form['filename_s3']
-            else: #Also get file
+            else:  # Also get file
                 file = request.files['file']
-                filename = str(randint(10000,99999)) + '_' + secure_filename(file.filename)
-            #Get fields from web-form
+                filename = str(randint(10000, 99999)) + '_' + \
+                    secure_filename(file.filename)
+            # Get fields from web-form
             title = form.title.data
             description = form.description.data
             type = form.type.data
             who = form.who.data
             author = session['username']
-            #Insert into files database:
-            db_row=Files(filename=filename,title=title,description=description,workshop=workshop,type=type,who=who,author=author)
+            # Insert into files database:
+            db_row = Files(filename=filename, title=title, description=description,
+                           workshop=workshop, type=type, who=who, author=author)
             id = psql_insert(db_row)
-            if app.config['S3_OR_DBX'] == 'DBX': #Save file to dropbox
+            if app.config['S3_OR_DBX'] == 'DBX':  # Save file to dropbox
                 upload_file_to_dbx(file, filename)
-            #flash success message and reload page
+            # flash success message and reload page
             flash('File uploaded successfully', 'success')
-            return redirect(url_for('upload',workshopID=workshopID))
+            return redirect(url_for('upload', workshopID=workshopID))
         else:
-            if app.config['S3_OR_DBX'] == 'S3': #Delete file from S3
+            if app.config['S3_OR_DBX'] == 'S3':  # Delete file from S3
                 filename_s3 = request.form['filename_s3']
                 delete_file_from_s3(filename_s3)
-            #Flash error message:
+            # Flash error message:
             flash('Fix form errors and try again', 'danger')
-    #If user just navigates to page
-    return render_template('upload.html',form=form,workshop=workshop,
-        workshopID=workshopID,S3_OR_DBX=app.config['S3_OR_DBX'])
+    # If user just navigates to page
+    return render_template('upload.html', form=form, workshop=workshop,
+                           workshopID=workshopID, S3_OR_DBX=app.config['S3_OR_DBX'])
 
-@app.route('/trainee-accounts', methods=["GET","POST"])
+
+@app.route('/trainee-accounts', methods=["GET", "POST"])
 @is_logged_in_as_trainer
 def trainee_accounts():
     usersData = psql_to_pandas(Trainees.query.order_by(Trainees.username))
     form = RegisterForm(request.form)
     if request.method == 'POST' and form.validate():
         username = form.username.data
-        #Check username is unique
+        # Check username is unique
         user = Trainees.query.filter_by(username=username).first()
         if user is not None:
             flash('Username already exists', 'danger')
             return redirect(url_for('trainee_accounts'))
         password = form.password.data
-        db_row = Trainees(username=username,password=password)
+        db_row = Trainees(username=username, password=password)
         id = psql_insert(db_row)
         flash('Trainee account added', 'success')
         return redirect(url_for('trainee_accounts'))
-    return render_template('trainee-accounts.html',form=form,usersData=usersData)
+    return render_template('trainee-accounts.html', form=form, usersData=usersData)
 
-@app.route('/trainer-accounts', methods=["GET","POST"])
+
+@app.route('/trainer-accounts', methods=["GET", "POST"])
 @is_logged_in_as_admin
 def trainer_accounts():
     usersData = psql_to_pandas(Trainers.query)
     form = RegisterTrainerForm(request.form)
     if request.method == 'POST' and form.validate():
         username = form.username.data
-        #Check username is unique
+        # Check username is unique
         user = Trainers.query.filter_by(username=username).first()
         if user is not None:
             flash('Username already exists', 'danger')
@@ -504,13 +552,14 @@ def trainer_accounts():
             flash('Username not allowed', 'danger')
             return redirect(url_for('trainer_accounts'))
         password = sha256_crypt.encrypt(str(form.password.data))
-        db_row = Trainers(username=username,password=password)
+        db_row = Trainers(username=username, password=password)
         id = psql_insert(db_row)
         flash('Trainer account added', 'success')
         return redirect(url_for('trainer_accounts'))
-    return render_template('trainer-accounts.html',form=form,usersData=usersData)
+    return render_template('trainer-accounts.html', form=form, usersData=usersData)
 
-@app.route('/change-pwd', methods=["GET","POST"])
+
+@app.route('/change-pwd', methods=["GET", "POST"])
 @is_logged_in_as_trainer
 def change_pwd():
     form = ChangePwdForm(request.form)
@@ -526,9 +575,10 @@ def change_pwd():
         else:
             flash('Current password incorrect', 'danger')
             return redirect(url_for('change_pwd'))
-    return render_template('change-pwd.html',form=form)
+    return render_template('change-pwd.html', form=form)
 
-@app.route('/workshops', methods=["GET","POST"])
+
+@app.route('/workshops', methods=["GET", "POST"])
 @is_logged_in_as_admin
 def workshops():
     workshopsData = psql_to_pandas(Workshops.query)
@@ -538,57 +588,62 @@ def workshops():
         id = psql_insert(db_row)
         flash('Workshop added', 'success')
         return redirect(url_for('workshops'))
-    return render_template('workshops.html',workshopsData=workshopsData)
+    return render_template('workshops.html', workshopsData=workshopsData)
+
 
 @app.route('/folders/<string:id>')
 @is_logged_in_as_admin
 def folders(id):
-    #Retrieve workshop:
+    # Retrieve workshop:
     result = Workshops.query.filter_by(id=id).first()
     if result is None:
         abort(404)
     allFoldersData = psql_to_pandas(Folders.query)
-    foldersData=allFoldersData.loc[allFoldersData['workshop'] == result.workshop]
-    return render_template('folders.html',data=foldersData,workshopName=result.workshop,workshopID=id)
+    foldersData = allFoldersData.loc[allFoldersData['workshop']
+                                     == result.workshop]
+    return render_template('folders.html', data=foldersData, workshopName=result.workshop, workshopID=id)
+
 
 @app.route('/add-folder/<string:id>/<string:parent>', methods=["POST"])
 @is_logged_in_as_admin
-def add_folder(id,parent):
-    #Retrieve workshop:
+def add_folder(id, parent):
+    # Retrieve workshop:
     workshop = Workshops.query.filter_by(id=id).first().workshop
     name = request.form['folder']
-    db_row = Folders(workshop=workshop,parent=parent,name=name)
+    db_row = Folders(workshop=workshop, parent=parent, name=name)
     dummy = psql_insert(db_row)
-    return redirect(url_for('folders',id=id))
+    return redirect(url_for('folders', id=id))
+
 
 @app.route('/delete-folder/<string:id>', methods=["POST"])
 @is_logged_in_as_admin
 def delete_folder(id):
-    #Retrieve folder:
+    # Retrieve folder:
     folder = Folders.query.filter_by(id=id).first()
     if folder is None:
         abort(404)
-    #Retrieve workshop id:
+    # Retrieve workshop id:
     workshop = folder.workshop
     workshopID = Workshops.query.filter_by(workshop=workshop).first().id
-    #Check folder is empty:
-    type = folder.parent+'_'+folder.name
-    filesInFolder = Files.query.filter_by(workshop=workshop,type=type).first()
+    # Check folder is empty:
+    type = folder.parent + '_' + folder.name
+    filesInFolder = Files.query.filter_by(workshop=workshop, type=type).first()
     if filesInFolder is not None:
-        flash("Cannot delete folder until it is empty (check both trainee and trainer material)","danger")
-        return redirect(url_for('folders',id=workshopID))
-    #Delete from DB:
+        flash("Cannot delete folder until it is empty (check both trainee and trainer material)", "danger")
+        return redirect(url_for('folders', id=workshopID))
+    # Delete from DB:
     psql_delete(folder)
-    flash("Folder deleted","success")
-    return redirect(url_for('folders',id=workshopID))
+    flash("Folder deleted", "success")
+    return redirect(url_for('folders', id=workshopID))
+
 
 @app.route('/edit/<string:id>/<string:S3_OR_DBX>', methods=["POST"])
 @is_logged_in_as_trainer
-def edit(id,S3_OR_DBX):
+def edit(id, S3_OR_DBX):
     result = Files.query.filter_by(id=id).first()
     if result is None:
         abort(404)
-    workshop=result.workshop
+    workshop = result.workshop
     if 'edit' in request.form:
         form = UploadForm()
         form.type.choices = get_type_list(workshop)
@@ -596,35 +651,36 @@ def edit(id,S3_OR_DBX):
         form.description.data = result.description
         form.type.data = result.type
         form.who.data = result.who
-        return render_template('edit.html',form=form,id=id,S3_OR_DBX=S3_OR_DBX)
+        return render_template('edit.html', form=form, id=id, S3_OR_DBX=S3_OR_DBX)
     else:
         form = UploadForm(request.form)
         form.type.choices = get_type_list(workshop)
         if form.validate():
-            if app.config['S3_OR_DBX'] == 'S3': #Get filename only
+            if app.config['S3_OR_DBX'] == 'S3':  # Get filename only
                 filename = request.form['filename_s3']
-            else: #Also get file
+            else:  # Also get file
                 if 'file' in request.files:
                     file = request.files['file']
-                    filename = str(randint(10000,99999)) + '_' + secure_filename(file.filename)
+                    filename = str(randint(10000, 99999)) + \
+                        '_' + secure_filename(file.filename)
                 else:
                     filename = ''
-            #Delete old file if not blank:
+            # Delete old file if not blank:
             if not filename == '':
-                old_filename=result.filename
+                old_filename = result.filename
                 if app.config['S3_OR_DBX'] == 'S3':
                     delete_file_from_s3(old_filename)
                 else:
                     delete_file_from_dbx(old_filename)
-                    #Save new file to dropbox:
+                    # Save new file to dropbox:
                     upload_file_to_dbx(file, filename)
                 result.filename = filename
-            #Get form info:
+            # Get form info:
             title = form.title.data
             description = form.description.data
             type = form.type.data
             who = form.who.data
-            #Update DB:
+            # Update DB:
             result.title = title
             result.description = description
             result.type = type
@@ -633,15 +689,18 @@ def edit(id,S3_OR_DBX):
             flash('File edits successful', 'success')
             return redirect(url_for('index'))
         else:
-            if app.config['S3_OR_DBX'] == 'S3': #Delete file from S3 if not blank:
+            # Delete file from S3 if not blank:
+            if app.config['S3_OR_DBX'] == 'S3':
                 filename = request.form['filename_s3']
                 if not filename == "":
                     delete_file_from_s3(filename)
-            #Flash error message:
+            # Flash error message:
             flash('Invalid option selected, please try to edit the file again', 'danger')
             return redirect(url_for('index'))
 
-#Download file (Dropbox only)
+# Download file (Dropbox only)
+
+
 @app.route('/download-file/<string:id>', methods=['POST'])
 @is_logged_in
 def download_file(id):
@@ -649,20 +708,22 @@ def download_file(id):
     if result is None:
         abort(404)
     filename = result.filename
-    #Try to download the file from dbx to /tmp if it's not already there:
-    if not os.path.exists('/tmp/'+filename):
+    # Try to download the file from dbx to /tmp if it's not already there:
+    if not os.path.exists('/tmp/' + filename):
         try:
             download_file_from_dbx(filename)
         except:
-            flash("Unable to download file","danger")
+            flash("Unable to download file", "danger")
             return redirect(url_for('index'))
-    #Serve the file to the client:
-    if os.path.exists('/tmp/'+filename):
-        return send_from_directory('/tmp',filename,as_attachment=True,attachment_filename=filename)
+    # Serve the file to the client:
+    if os.path.exists('/tmp/' + filename):
+        return send_from_directory('/tmp', filename, as_attachment=True, attachment_filename=filename)
     else:
         abort(404)
 
-#Download timetable (Dropbox only)
+# Download timetable (Dropbox only)
+
+
 @app.route('/download-timetable/<string:id>', methods=['POST'])
 @is_logged_in
 def download_timetable(id):
@@ -670,20 +731,22 @@ def download_timetable(id):
     if result is None:
         abort(404)
     filename = result.filename
-    #Try to download the timetable from dbx to /tmp if it's not already there:
-    if not os.path.exists('/tmp/'+filename):
+    # Try to download the timetable from dbx to /tmp if it's not already there:
+    if not os.path.exists('/tmp/' + filename):
         try:
             download_file_from_dbx(filename)
         except:
-            flash("Unable to download timetable","danger")
+            flash("Unable to download timetable", "danger")
             return redirect(url_for('timetables'))
-    #Serve the timetable to the client:
-    if os.path.exists('/tmp/'+filename):
-        return send_from_directory('/tmp',filename,as_attachment=True,attachment_filename=filename)
+    # Serve the timetable to the client:
+    if os.path.exists('/tmp/' + filename):
+        return send_from_directory('/tmp', filename, as_attachment=True, attachment_filename=filename)
     else:
         abort(404)
 
-#View timetable (Dropbox only; docx files only)
+# View timetable (Dropbox only; docx files only)
+
+
 @app.route('/view-timetable/<string:id>')
 @is_logged_in
 def view_timetable(id):
@@ -693,25 +756,27 @@ def view_timetable(id):
     if result is None:
         abort(404)
     filename = result.filename
-    #Try to download the timetable from dbx to /tmp if it's not already there:
-    if not os.path.exists('/tmp/'+filename):
+    # Try to download the timetable from dbx to /tmp if it's not already there:
+    if not os.path.exists('/tmp/' + filename):
         try:
             download_file_from_dbx(filename)
         except:
-            flash("Unable to download timetable","danger")
+            flash("Unable to download timetable", "danger")
             return redirect(url_for('timetables'))
-    #Convert to HTML:
+    # Convert to HTML:
     try:
-        with open('/tmp/'+filename, "rb") as docx_file:
+        with open('/tmp/' + filename, "rb") as docx_file:
             result = mammoth.convert_to_html(docx_file)
             text = result.value
             print(text)
             return text
     except:
-        flash("Unable to convert to html","danger")
+        flash("Unable to convert to html", "danger")
         return redirect(url_for('timetables'))
 
-#Delete file
+# Delete file
+
+
 @app.route('/delete-file/<string:id>', methods=['POST'])
 @is_logged_in_as_trainer
 def delete_file(id):
@@ -719,20 +784,22 @@ def delete_file(id):
     if result is None:
         abort(404)
     filename = result.filename
-    #Delete from DB:
+    # Delete from DB:
     psql_delete(result)
-    #Delete from cloud:
+    # Delete from cloud:
     try:
         if app.config['S3_OR_DBX'] == 'S3':
             delete_file_from_s3(filename)
         else:
             delete_file_from_dbx(filename)
     except:
-        flash("Unable to delete file from cloud","warning")
-    flash("File deleted","success")
+        flash("Unable to delete file from cloud", "warning")
+    flash("File deleted", "success")
     return redirect(url_for('index'))
 
-#Delete timetable
+# Delete timetable
+
+
 @app.route('/delete-timetable/<string:id>', methods=['POST'])
 @is_logged_in_as_trainer
 def delete_timetable(id):
@@ -740,20 +807,22 @@ def delete_timetable(id):
     if result is None:
         abort(404)
     filename = result.filename
-    #Delete from DB:
+    # Delete from DB:
     psql_delete(result)
-    #Delete from cloud:
+    # Delete from cloud:
     try:
         if app.config['S3_OR_DBX'] == 'S3':
             delete_file_from_s3(filename)
         else:
             delete_file_from_dbx(filename)
     except:
-        flash("Unable to delete timetable from cloud","warning")
-    flash("Timetable deleted","success")
+        flash("Unable to delete timetable from cloud", "warning")
+    flash("Timetable deleted", "success")
     return redirect(url_for('timetables'))
 
-#Delete trainee
+# Delete trainee
+
+
 @app.route('/delete-trainee/<string:id>', methods=['POST'])
 @is_logged_in_as_admin
 def delete_trainee(id):
@@ -764,7 +833,9 @@ def delete_trainee(id):
     flash('Trainee account deleted', 'success')
     return redirect(url_for('trainee_accounts'))
 
-#Delete trainer
+# Delete trainer
+
+
 @app.route('/delete-trainer/<string:id>', methods=['POST'])
 @is_logged_in_as_admin
 def delete_trainer(id):
@@ -775,7 +846,9 @@ def delete_trainer(id):
     flash('Trainer account deleted', 'success')
     return redirect(url_for('trainer_accounts'))
 
-#Delete workshop
+# Delete workshop
+
+
 @app.route('/delete-workshop/<string:id>', methods=['POST'])
 @is_logged_in_as_admin
 def delete_workshop(id):
@@ -786,13 +859,16 @@ def delete_workshop(id):
     flash('Workshop deleted', 'success')
     return redirect(url_for('workshops'))
 
-#Logout
+# Logout
+
+
 @app.route('/logout')
 @is_logged_in
 def logout():
     session.clear()
     flash('You are now logged out', 'success')
     return redirect(url_for('index'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
