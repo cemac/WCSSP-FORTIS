@@ -332,7 +332,7 @@ def index():
                 return redirect(url_for('index'))
         # Check trainer accounts next:
         user = Trainers.query.filter_by(username=username).first()
-        if user is not None and username != 'sam_hardy':
+        if user is not None:
             password = user.password
             # Compare passwords
             if sha256_crypt.verify(password_candidate, password):
@@ -342,7 +342,7 @@ def index():
                 if username != 'sam_hardy':
                     session['usertype'] = 'trainer'
                     flash('You are now logged in', 'success')
-                else:
+                elif username == 'sam_hardy':
                     session['usertype'] = 'admin'
                     flash('You are now logged in with admin privillages', 'success')
                 return redirect(url_for('index'))
