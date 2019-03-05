@@ -1,4 +1,3 @@
-from models import Trainees, Trainers, Workshops, Files, Timetables, Folders
 from flask import Flask, render_template, flash, redirect, url_for, request, g, session, abort, send_from_directory
 from wtforms import Form, validators, StringField, TextAreaField, SelectField, PasswordField
 from werkzeug.utils import secure_filename
@@ -34,7 +33,7 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 
 # Configure postgresql database:
 db = SQLAlchemy(app)
-
+from models import Trainees, Trainers, Workshops, Files, Timetables, Folders
 # ######### GLOBAL VARIABLES ##########
 typeDict = {
     'lectures1': 'Day 1 / Lectures / ',
@@ -339,8 +338,12 @@ def index():
                 # Passed
                 session['logged_in'] = True
                 session['username'] = username
-                session['usertype'] = 'trainer'
-                flash('You are now logged in', 'success')
+                if username != 'sam_hardy':
+                    session['usertype'] = 'trainer'
+                    flash('You are now logged in', 'success')
+                elif username == 'sam_hardy':
+                    session['usertype'] = 'admin'
+                    flash('You are now logged in with admin privillages', 'success')
                 return redirect(url_for('index'))
             else:
                 flash('Incorrect password', 'danger')
@@ -349,20 +352,6 @@ def index():
         if username == 'admin':
             password = app.config['ADMIN_PWD']
             if password_candidate == password:
-                # Passed
-                session['logged_in'] = True
-                session['username'] = 'admin'
-                session['usertype'] = 'admin'
-                flash('You are now logged in', 'success')
-                return redirect(url_for('index'))
-            else:
-                flash('Incorrect password', 'danger')
-                return redirect(url_for('index'))
-        # Sam as  check admin account:
-        if username == 'sam_hardy':
-            password = user.password
-            # Compare passwords
-            if sha256_crypt.verify(password_candidate, password):
                 # Passed
                 session['logged_in'] = True
                 session['username'] = 'admin'
