@@ -274,7 +274,7 @@ class UploadForm(Form):
 
 class RegisterForm(Form):
     username = StringField('Username',
-                           [validators.Regexp('^BMKG_participan-[0-9]{2}$',
+                           [validators.Regexp('^BMKG_participant-[0-9]{2}$',
                                               message='Username must be of the form BMKG_participant-XX where XX is a two-digit number')])
     password = PasswordField('Password',
                              [validators.Regexp('^([a-zA-Z0-9]{8,})$',
