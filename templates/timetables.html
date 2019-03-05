@@ -11,30 +11,58 @@
     <th>Timetable</th>
     <th></th>
   </tr>
+
   {% for index, row in timetablesData.iterrows() %}
     <tr>
-      <td>{{row['workshop']}}</td>
-      <td>
-        {% if (S3_OR_DBX == 'DBX') and ('.docx' in row['filename']) %}
-          <a href="/view-timetable/{{row['id']}}" target="_blank" >Click to view</a>
-          <br>
+      {% if session.usertype == 'trainee'}
+        {% if {row['workshop'] == '11-15 March 2019 (BMKG, Jakarta, Indonesia)'}
+          <td>{{row['workshop']}}</td>
+          <td>
+            {% if (S3_OR_DBX == 'DBX') and ('.docx' in row['filename']) %}
+              <a href="/view-timetable/{{row['id']}}" target="_blank" >Click to view</a>
+              <br>
+            {% endif %}
+            {% if S3_OR_DBX == 'S3' %}
+              <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">Click to download</a>
+            {% elif S3_OR_DBX == 'DBX' %}
+              <form action=/download-timetable/{{row['id']}} method="post">
+                <a href="#" onclick="this.parentNode.submit()">Click to download</a>
+              </form>
+            {% endif %}
+          </td>
+          <td>
+            {% if session.username == row['author'] or session.username == 'admin' %}
+              <form action=/delete-timetable/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
+                <input type="hidden" name="_method" value="DELETE">
+                <input type="submit" value="Delete" class="btn btn-danger">
+              </form>
+            {% endif %}
+          </td>
+          {% endif %}
+        {%else}
+          <td>{{row['workshop']}}</td>
+          <td>
+            {% if (S3_OR_DBX == 'DBX') and ('.docx' in row['filename']) %}
+              <a href="/view-timetable/{{row['id']}}" target="_blank" >Click to view</a>
+              <br>
+            {% endif %}
+            {% if S3_OR_DBX == 'S3' %}
+              <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">Click to download</a>
+            {% elif S3_OR_DBX == 'DBX' %}
+              <form action=/download-timetable/{{row['id']}} method="post">
+                <a href="#" onclick="this.parentNode.submit()">Click to download</a>
+              </form>
+            {% endif %}
+          </td>
         {% endif %}
-        {% if S3_OR_DBX == 'S3' %}
-          <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">Click to download</a>
-        {% elif S3_OR_DBX == 'DBX' %}
-          <form action=/download-timetable/{{row['id']}} method="post">
-            <a href="#" onclick="this.parentNode.submit()">Click to download</a>
-          </form>
-        {% endif %}
-      </td>
-      <td>
-        {% if session.username == row['author'] or session.username == 'admin' %}
-          <form action=/delete-timetable/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
-            <input type="hidden" name="_method" value="DELETE">
-            <input type="submit" value="Delete" class="btn btn-danger">
-          </form>
-        {% endif %}
-      </td>
+          <td>
+            {% if session.username == row['author'] or session.username == 'admin' %}
+              <form action=/delete-timetable/{{row['id']}} method="post" onsubmit="return confirm('Are you sure?');">
+                <input type="hidden" name="_method" value="DELETE">
+                <input type="submit" value="Delete" class="btn btn-danger">
+              </form>
+            {% endif %}
+          </td>
     </tr>
   {% endfor %}
 </table>
