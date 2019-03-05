@@ -275,8 +275,8 @@ class UploadForm(Form):
 
 class RegisterForm(Form):
     username = StringField('Username',
-                           [validators.Regexp('^trainee-[0-9]{2}$',
-                                              message='Username must be of the form trainee-XX where XX is a two-digit number')])
+                           [validators.Regexp('^BMKG_participan-[0-9]{2}$',
+                                              message='Username must be of the form BMKG_participant-XX where XX is a two-digit number')])
     password = PasswordField('Password',
                              [validators.Regexp('^([a-zA-Z0-9]{8,})$',
                                                 message='Password must be mimimum 8 characters and contain only uppercase letters, \
@@ -358,6 +358,20 @@ def index():
             else:
                 flash('Incorrect password', 'danger')
                 return redirect(url_for('index'))
+        # Finally check admin account:
+        if username == 'sam_hardy':
+            password = user.password
+            # Compare passwords
+            if sha256_crypt.verify(password_candidate, password):
+                # Passed
+                session['logged_in'] = True
+                session['username'] = 'admin'
+                session['usertype'] = 'admin'
+                flash('You are now logged in', 'success')
+                return redirect(url_for('index'))
+            else:
+                flash('Incorrect password', 'danger')
+                return redirect(url_for('index'))
         # Username not found:
         flash('Username not found', 'danger')
         return redirect(url_for('index'))
@@ -430,7 +444,7 @@ def contact_us():
 
 
 @app.route('/select-workshop/<string:linkTo>')
-@is_logged_in_as_trainer
+@is_logged_in
 def select_workshop(linkTo):
     workshopsData = psql_to_pandas(Workshops.query)
     return render_template('select-workshop.html', workshopsData=workshopsData, linkTo=linkTo)
