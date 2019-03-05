@@ -330,20 +330,6 @@ def index():
             else:
                 flash('Incorrect password', 'danger')
                 return redirect(url_for('index'))
-        # Sam as admin check admin account:
-        if username == 'sam_hardy':
-            password = user.password
-            # Compare passwords
-            if sha256_crypt.verify(password_candidate, password):
-                # Passed
-                session['logged_in'] = True
-                session['username'] = 'admin'
-                session['usertype'] = 'admin'
-                flash('You are now logged in', 'success')
-                return redirect(url_for('index'))
-            else:
-                flash('Incorrect password', 'danger')
-                return redirect(url_for('index'))
         # Check trainer accounts next:
         user = Trainers.query.filter_by(username=username).first()
         if user is not None and username != 'sam_hardy':
@@ -353,8 +339,12 @@ def index():
                 # Passed
                 session['logged_in'] = True
                 session['username'] = username
-                session['usertype'] = 'trainer'
-                flash('You are now logged in', 'success')
+                if username != 'sam_hardy':
+                    session['usertype'] = 'trainer'
+                    flash('You are now logged in', 'success')
+                else:
+                    session['usertype'] = 'admin'
+                    flash('You are now logged in with admin privillages', 'success')
                 return redirect(url_for('index'))
             else:
                 flash('Incorrect password', 'danger')
