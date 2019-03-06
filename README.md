@@ -37,8 +37,23 @@ Recommended via anaconda - see
 
 ## Usage
 
+<<<<<<< HEAD
 * [Developers](https://github.com/cemac/WCSSP-FORTIS/wiki/Developers-Guide)
 * [Users](https://github.com/cemac/WCSSP-FORTIS/wiki/User-Guide)
+=======
+```bash
+git clone repo.git
+cd repo
+conda create -f fortis.yaml
+source .env # git-crypted
+python manage.py db upgrade
+python manage runserver
+```
+>>>>>>> 73028c9... :memo: note on git crypt
+
+**NB** .env can [be decrypted for CEMAC users](https://github.com/cemac/cemac_generic/wiki/Sensitive-information/)
+
+*example .env coming soon*
 
 <hr>
 
