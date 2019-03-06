@@ -33,10 +33,15 @@ Repository for the [WCSSP FORTIS](https://www.metoffice.gov.uk/research/collabor
 ```bash
 git clone repo.git
 cd repo
-source .env
+conda create -f fortis.yaml
+source .env # git-crypted
 python manage.py db upgrade
 python manage runserver
 ```
+
+**NB** .env can [be decrypted for CEMAC users](https://github.com/cemac/cemac_generic/wiki/Sensitive-information/)
+
+*example .env coming soon*
 
 <hr>
 
