@@ -16,8 +16,8 @@
         </div>
         <div id="collapseD{{iday}}" class="panel-collapse collapse">
           <div class="panel-body">
-            {% set Titles = ['Lectures','Practical 1','Practical 2','Research Seminar'] %}
-            {% for type in ['lectures','practicals','practicals2-','seminar'] %}
+            {% set Titles = ['Lectures','Practical 1','Practical 2'] %}
+            {% for type in ['lectures','practicals','practicals2-'] %}
               {% set typeFilesData = whoFilesData.loc[whoFilesData['type']==type+iday|string] %}
               {% set typeFoldersData = foldersData.loc[foldersData['parent']==type+iday|string] %}
               {% set Tloop = loop.index %}
