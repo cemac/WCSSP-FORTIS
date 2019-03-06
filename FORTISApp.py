@@ -39,23 +39,17 @@ typeDict = {
     'lectures1': 'Day 1 / Lectures / ',
     'practicals1': 'Day 1 / Practical 1 /',
     'practicals2-1': 'Day 1 / Practical 2 / ',
-    'seminar1': 'Day 1 / Research Seminar / ',
     'lectures2': 'Day 2 / Lectures / ',
     'practicals2': 'Day 2 / Practical 1 / ',
     'practicals2-2': 'Day 2 / Practical 2 / ',
-    'seminar2': 'Day 2 / Research Seminar / ',
     'lectures3': 'Day 3 / Lectures / ',
     'practicals3': 'Day 3 / Practical 1 / ',
     'practicals2-3': 'Day 3 / Practical 2 / ',
-    'seminar3': 'Day 3 / Research Seminar / ',
     'lectures4': 'Day 4 / Lectures / ',
     'practicals4': 'Day 4 / Practical 1 / ',
     'practicals2-4': 'Day 4 / Practical 2 / ',
-    'seminar4': 'Day 4 / Research Seminar / ',
     'lectures5': 'Day 5 / Lectures / ',
     'practicals5': 'Day 5 / Practical 1 / ',
-    'practicals2-5': 'Day 5 / Practical 2 / ',
-    'seminar5': 'Day 5 / Research Seminar / ',
     'other': 'Other'
 }
 ######################################
