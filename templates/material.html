@@ -58,7 +58,7 @@
                                   {% endif %}
                                   <small>Uploaded by <b>{{row['author']}}</b></small>
                                 </h4>
-                                {% if session.username == row['author'] or session.username == 'admin' %}
+                                {% if session.username == row['author'] or session.username == 'admin' or session.username == 'sam_hardy'%}
                                   <form action=/edit/{{row['id']}}/{{S3_OR_DBX}} method="post" style="display:inline;">
                                     <input type="submit" name="edit" value="Edit" class="btn btn-primary">
                                   </form>
@@ -94,7 +94,7 @@
                         {% endif %}
                         <small>Uploaded by <b>{{row['author']}}</b></small>
                       </h4>
-                      {% if session.username == row['author'] or session.username == 'admin' %}
+                      {% if session.username == row['author'] or session.username == 'admin' session.username == 'sam_hardy'%}
                         <form action=/edit/{{row['id']}}/{{S3_OR_DBX}} method="post" style="display:inline;">
                           <input type="submit" name="edit" value="Edit" class="btn btn-primary">
                         </form>
@@ -142,7 +142,7 @@
                 {% endif %}
                 <small>Uploaded by <b>{{row['author']}}</b></small>
               </h4>
-              {% if session.username == row['author'] or session.username == 'admin' %}
+              {% if session.username == row['author'] or session.username == 'admin' or session.username == 'sam_hardy'%}
                 <form action=/edit/{{row['id']}}/{{S3_OR_DBX}} method="post" style="display:inline;">
                   <input type="submit" name="edit" value="Edit" class="btn btn-primary">
                 </form>
