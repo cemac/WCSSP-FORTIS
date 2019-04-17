@@ -358,12 +358,12 @@ def index():
         # Username not found:
         flash('Username not found', 'danger')
         return redirect(url_for('index'))
-    return render_template('home.html.j2')
+    return render_template('home.html')
 
 
 @app.route('/about')
 def about():
-    return render_template('about.html.j2')
+    return render_template('about.html')
 
 
 @app.route('/timetables', methods=["GET", "POST"])
@@ -413,24 +413,24 @@ def timetables():
                 delete_file_from_s3(filename_s3)
             # Flash error message:
             flash('Fix form errors and try again', 'danger')
-    return render_template('timetables.html.j2', form=form, timetablesData=timetablesData, S3_OR_DBX=app.config['S3_OR_DBX'])
+    return render_template('timetables.html', form=form, timetablesData=timetablesData, S3_OR_DBX=app.config['S3_OR_DBX'])
 
 
 @app.route('/partners')
 def partners():
-    return render_template('partners.html.j2')
+    return render_template('partners.html')
 
 
 @app.route('/contact-us')
 def contact_us():
-    return render_template('contact-us.html.j2')
+    return render_template('contact-us.html')
 
 
 @app.route('/select-workshop/<string:linkTo>')
 @is_logged_in
 def select_workshop(linkTo):
     workshopsData = psql_to_pandas(Workshops.query)
-    return render_template('select-workshop.html.j2', workshopsData=workshopsData, linkTo=linkTo)
+    return render_template('select-workshop.html', workshopsData=workshopsData, linkTo=linkTo)
 
 
 @app.route('/training-material/<string:workshopID>')
@@ -446,7 +446,7 @@ def training_material(workshopID):
     filesData = allFilesData.loc[allFilesData['workshop'] == workshop]
     allfoldersData = psql_to_pandas(Folders.query)
     foldersData = allfoldersData.loc[allfoldersData['workshop'] == workshop]
-    return render_template('material.html.j2', filesData=filesData, foldersData=foldersData,
+    return render_template('material.html', filesData=filesData, foldersData=foldersData,
                            workshop=workshop, who='trainees', S3_OR_DBX=app.config['S3_OR_DBX'])
 
 
@@ -463,7 +463,7 @@ def trainer_material(workshopID):
     filesData = allFilesData.loc[allFilesData['workshop'] == workshop]
     allfoldersData = psql_to_pandas(Folders.query)
     foldersData = allfoldersData.loc[allfoldersData['workshop'] == workshop]
-    return render_template('material.html.j2', filesData=filesData, foldersData=foldersData,
+    return render_template('material.html', filesData=filesData, foldersData=foldersData,
                            workshop=workshop, who='trainers', S3_OR_DBX=app.config['S3_OR_DBX'])
 
 
@@ -509,7 +509,7 @@ def upload(workshopID):
             # Flash error message:
             flash('Fix form errors and try again', 'danger')
     # If user just navigates to page
-    return render_template('upload.html.j2', form=form, workshop=workshop,
+    return render_template('upload.html', form=form, workshop=workshop,
                            workshopID=workshopID, S3_OR_DBX=app.config['S3_OR_DBX'])
 
 
@@ -530,7 +530,7 @@ def trainee_accounts():
         id = psql_insert(db_row)
         flash('Trainee account added', 'success')
         return redirect(url_for('trainee_accounts'))
-    return render_template('trainee-accounts.html.j2', form=form, usersData=usersData)
+    return render_template('trainee-accounts.html', form=form, usersData=usersData)
 
 
 @app.route('/trainer-accounts', methods=["GET", "POST"])
@@ -553,7 +553,7 @@ def trainer_accounts():
         id = psql_insert(db_row)
         flash('Trainer account added', 'success')
         return redirect(url_for('trainer_accounts'))
-    return render_template('trainer-accounts.html.j2', form=form, usersData=usersData)
+    return render_template('trainer-accounts.html', form=form, usersData=usersData)
 
 
 @app.route('/change-pwd', methods=["GET", "POST"])
@@ -572,7 +572,7 @@ def change_pwd():
         else:
             flash('Current password incorrect', 'danger')
             return redirect(url_for('change_pwd'))
-    return render_template('change-pwd.html.j2', form=form)
+    return render_template('change-pwd.html', form=form)
 
 
 @app.route('/workshops', methods=["GET", "POST"])
@@ -585,7 +585,7 @@ def workshops():
         id = psql_insert(db_row)
         flash('Workshop added', 'success')
         return redirect(url_for('workshops'))
-    return render_template('workshops.html.j2', workshopsData=workshopsData)
+    return render_template('workshops.html', workshopsData=workshopsData)
 
 
 @app.route('/folders/<string:id>')
@@ -598,7 +598,7 @@ def folders(id):
     allFoldersData = psql_to_pandas(Folders.query)
     foldersData = allFoldersData.loc[allFoldersData['workshop']
                                      == result.workshop]
-    return render_template('folders.html.j2', data=foldersData, workshopName=result.workshop, workshopID=id)
+    return render_template('folders.html', data=foldersData, workshopName=result.workshop, workshopID=id)
 
 
 @app.route('/add-folder/<string:id>/<string:parent>', methods=["POST"])
@@ -648,7 +648,7 @@ def edit(id, S3_OR_DBX):
         form.description.data = result.description
         form.type.data = result.type
         form.who.data = result.who
-        return render_template('edit.html.j2', form=form, id=id, S3_OR_DBX=S3_OR_DBX)
+        return render_template('edit.html', form=form, id=id, S3_OR_DBX=S3_OR_DBX)
     else:
         form = UploadForm(request.form)
         form.type.choices = get_type_list(workshop)
