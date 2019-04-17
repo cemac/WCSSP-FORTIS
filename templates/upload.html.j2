@@ -1,4 +1,4 @@
-{% extends 'layout.html' %}
+{% extends 'layout.html.j2' %}
 
 {% block body %}
   <h1>Upload new material</h1>
@@ -30,7 +30,7 @@
     <p id="status">Please select a file</p>
   {% endif %}
 
-  {% from "includes/_formhelpers.html" import render_field %}
+  {% from "includes/_formhelpers.html.j2" import render_field %}
   <form role="form" method="POST" action=/upload/{{workshopID}} enctype="multipart/form-data">
     {% if S3_OR_DBX == 'S3' %}
       <input type="hidden" id="filename_s3" name="filename_s3" value="">

@@ -1,9 +1,9 @@
-{% extends 'layout.html' %}
+{% extends 'layout.html.j2' %}
 
 {% block body %}
   <h1>Add a new workshop</h1>
   <hr>
-  {% from "includes/_formhelpers.html" import render_field %}
+  {% from "includes/_formhelpers.html.j2" import render_field %}
   <form method="POST" action="">
     <div class="form-group">
       <label for="workshop">Workshop</label>
