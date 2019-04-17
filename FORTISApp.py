@@ -20,15 +20,6 @@ assert "APP_SETTINGS" in os.environ, "APP_SETTINGS environment variable not set"
 assert "SECRET_KEY" in os.environ, "SECRET_KEY environment variable not set"
 assert "ADMIN_PWD" in os.environ, "ADMIN_PWD environment variable not set"
 assert "DATABASE_URL" in os.environ, "DATABASE_URL environment variable not set"
-assert "S3_OR_DBX" in os.environ, "S3_OR_DBX environment variable not set"
-if os.environ['S3_OR_DBX'] == 'S3':
-    assert "AWS_ACCESS_KEY_ID" in os.environ, "AWS_ACCESS_KEY_ID environment variable not set"
-    assert "AWS_SECRET_ACCESS_KEY" in os.environ, "AWS_SECRET_ACCESS_KEY environment variable not set"
-    assert "S3_BUCKET" in os.environ, "S3_BUCKET environment variable not set"
-elif os.environ['S3_OR_DBX'] == 'DBX':
-    assert "DROPBOX_KEY" in os.environ, "DROPBOX_KEY environment variable not set"
-else:
-    sys.exit("Variable S3_OR_DBX not set correctly")
 app.config.from_object(os.environ['APP_SETTINGS'])
 
 # Configure postgresql database:
@@ -74,104 +65,6 @@ def psql_delete(row):
     return
 ####################################
 
-# ######### S3 FUNCTIONS/ROUTES ##########
-
-
-def delete_file_from_s3(filename):
-    bucket_name = app.config['S3_BUCKET']
-    s3 = boto3.resource('s3', 'eu-west-2')
-    s3.Object(bucket_name, filename).delete()
-    return
-
-
-@app.route('/sign_s3/')
-def sign_s3():
-    bucket_name = app.config['S3_BUCKET']
-    filename_orig = request.args.get('file_name')
-    filename_s3 = str(randint(10000, 99999)) + '_' + \
-        secure_filename(filename_orig)
-    file_type = request.args.get('file_type')
-    s3 = boto3.client('s3', 'eu-west-2')
-    presigned_post = s3.generate_presigned_post(
-        Bucket=bucket_name,
-        Key=filename_s3,
-        Fields={"acl": "private", "Content-Type": file_type},
-        Conditions=[
-            {"acl": "private"},
-            {"Content-Type": file_type}
-        ],
-        ExpiresIn=3600
-    )
-    return json.dumps({
-        'data': presigned_post,
-        'url': 'https://%s.s3.eu-west-2.amazonaws.com/%s' % (bucket_name, filename_s3)
-    })
-
-
-@app.route('/sign_s3_download_timetable/')
-def sign_s3_download_timetable():
-    bucket_name = app.config['S3_BUCKET']
-    id = request.args.get('id')
-    # Retrieve s3 filename from DB:
-    db_entry = Timetables.query.filter_by(id=id).first()
-    filename_s3 = db_entry.filename
-    # Access granting:
-    if not 'logged_in' in session:
-        abort(403)
-    # Create and return pre-signed url:
-    s3 = boto3.client('s3', 'eu-west-2')
-    presigned_url = s3.generate_presigned_url(
-        'get_object',
-        Params={'Bucket': bucket_name, 'Key': filename_s3},
-        ExpiresIn=3600
-    )
-    return json.dumps({
-        'url': presigned_url,
-    })
-
-
-@app.route('/sign_s3_download_file/')
-def sign_s3_download_file():
-    bucket_name = app.config['S3_BUCKET']
-    id = request.args.get('id')
-    # Retrieve s3 filename from DB:
-    db_entry = Files.query.filter_by(id=id).first()
-    filename_s3 = db_entry.filename
-    # Access granting:
-    who = db_entry.who
-    if not 'logged_in' in session:
-        abort(403)
-    if who == 'trainers' and session['usertype'] == 'trainee':
-        abort(403)
-    # Create and return pre-signed url:
-    s3 = boto3.client('s3', 'eu-west-2')
-    presigned_url = s3.generate_presigned_url(
-        'get_object',
-        Params={'Bucket': bucket_name, 'Key': filename_s3},
-        ExpiresIn=3600
-    )
-    return json.dumps({
-        'url': presigned_url,
-    })
-##################################
-
-# ######### DROPBOX FUNCTIONS ##########
-
-
-def upload_file_to_dbx(file, filename):
-    dbx = dropbox.Dropbox(app.config['DROPBOX_KEY'])
-    response = dbx.files_upload(file.read(), '/' + filename, mute=True)
-
-
-def download_file_from_dbx(filename):
-    dbx = dropbox.Dropbox(app.config['DROPBOX_KEY'])
-    response = dbx.files_download_to_file('/tmp/' + filename, '/' + filename)
-
-
-def delete_file_from_dbx(filename):
-    dbx = dropbox.Dropbox(app.config['DROPBOX_KEY'])
-    response = dbx.files_delete('/' + filename)
-##################################
 
 # ######### LOGGED-IN FUNCTIONS ##########
 # Check if user is logged in
@@ -375,11 +268,9 @@ def timetables():
     # If user tries to upload a timetable
     if request.method == 'POST':
         if form.validate():
-            if app.config['S3_OR_DBX'] == 'S3':  # Get filename only
-                filename = request.form['filename_s3']
-            else:  # Also get file
-                file = request.files['file']
-                filename = str(randint(10000, 99999)) + '_' + \
+            # dropbox
+            file = request.files['file']
+            filename = str(randint(10000, 99999)) + '_' + \
                     secure_filename(file.filename)
             # Get fields from web-form
             workshop = form.workshop.data
@@ -392,28 +283,23 @@ def timetables():
                 psql_delete(timetable)
                 # Delete from cloud:
                 try:
-                    if app.config['S3_OR_DBX'] == 'S3':
-                        delete_file_from_s3(old_filename)
-                    else:
-                        delete_file_from_dbx(old_filename)
+                    #dropbox
+                    delete_file_from_dbx(old_filename)
                 except:
                     flash("Unable to delete timetable from cloud", "warning")
             # Insert new timetable into database:
             db_row = Timetables(filename=filename,
                                 workshop=workshop, author=author)
             id = psql_insert(db_row)
-            if app.config['S3_OR_DBX'] == 'DBX':  # Save file to dropbox
-                upload_file_to_dbx(file, filename)
+            # dropbox
+            upload_file_to_dbx(file, filename)
             # flash success message and reload page
             flash('Timetable uploaded successfully', 'success')
             return redirect(url_for('timetables'))
         else:
-            if app.config['S3_OR_DBX'] == 'S3':  # Delete file from S3
-                filename_s3 = request.form['filename_s3']
-                delete_file_from_s3(filename_s3)
             # Flash error message:
             flash('Fix form errors and try again', 'danger')
-    return render_template('timetables.html.j2', form=form, timetablesData=timetablesData, S3_OR_DBX=app.config['S3_OR_DBX'])
+    return render_template('timetables.html.j2', form=form, timetablesData=timetablesData)
 
 
 @app.route('/partners')
@@ -447,7 +333,7 @@ def training_material(workshopID):
     allfoldersData = psql_to_pandas(Folders.query)
     foldersData = allfoldersData.loc[allfoldersData['workshop'] == workshop]
     return render_template('material.html.j2', filesData=filesData, foldersData=foldersData,
-                           workshop=workshop, who='trainees', S3_OR_DBX=app.config['S3_OR_DBX'])
+                           workshop=workshop, who='trainees')
 
 
 @app.route('/trainer-material/<string:workshopID>')
@@ -464,7 +350,7 @@ def trainer_material(workshopID):
     allfoldersData = psql_to_pandas(Folders.query)
     foldersData = allfoldersData.loc[allfoldersData['workshop'] == workshop]
     return render_template('material.html.j2', filesData=filesData, foldersData=foldersData,
-                           workshop=workshop, who='trainers', S3_OR_DBX=app.config['S3_OR_DBX'])
+                           workshop=workshop, who='trainers')
 
 
 @app.route('/upload/<string:workshopID>', methods=["GET", "POST"])
@@ -481,12 +367,10 @@ def upload(workshopID):
     # If user tries to upload a file
     if request.method == 'POST':
         if form.validate():
-            if app.config['S3_OR_DBX'] == 'S3':  # Get filename only
-                filename = request.form['filename_s3']
-            else:  # Also get file
-                file = request.files['file']
-                filename = str(randint(10000, 99999)) + '_' + \
-                    secure_filename(file.filename)
+            # dropbox
+            file = request.files['file']
+            filename = (str(randint(10000, 99999)) + '_' +
+                        secure_filename(file.filename))
             # Get fields from web-form
             title = form.title.data
             description = form.description.data
@@ -497,20 +381,17 @@ def upload(workshopID):
             db_row = Files(filename=filename, title=title, description=description,
                            workshop=workshop, type=type, who=who, author=author)
             id = psql_insert(db_row)
-            if app.config['S3_OR_DBX'] == 'DBX':  # Save file to dropbox
-                upload_file_to_dbx(file, filename)
+            # Save file to dropbox
+            upload_file_to_dbx(file, filename)
             # flash success message and reload page
             flash('File uploaded successfully', 'success')
             return redirect(url_for('upload', workshopID=workshopID))
         else:
-            if app.config['S3_OR_DBX'] == 'S3':  # Delete file from S3
-                filename_s3 = request.form['filename_s3']
-                delete_file_from_s3(filename_s3)
             # Flash error message:
             flash('Fix form errors and try again', 'danger')
     # If user just navigates to page
     return render_template('upload.html.j2', form=form, workshop=workshop,
-                           workshopID=workshopID, S3_OR_DBX=app.config['S3_OR_DBX'])
+                           workshopID=workshopID)
 
 
 @app.route('/trainee-accounts', methods=["GET", "POST"])
@@ -634,9 +515,9 @@ def delete_folder(id):
     return redirect(url_for('folders', id=workshopID))
 
 
-@app.route('/edit/<string:id>/<string:S3_OR_DBX>', methods=["POST"])
+@app.route('/edit/<string:id>', methods=["POST"])
 @is_logged_in_as_trainer
-def edit(id, S3_OR_DBX):
+def edit(id):
     result = Files.query.filter_by(id=id).first()
     if result is None:
         abort(404)
@@ -648,29 +529,24 @@ def edit(id, S3_OR_DBX):
         form.description.data = result.description
         form.type.data = result.type
         form.who.data = result.who
-        return render_template('edit.html.j2', form=form, id=id, S3_OR_DBX=S3_OR_DBX)
+        return render_template('edit.html.j2', form=form, id=id)
     else:
         form = UploadForm(request.form)
         form.type.choices = get_type_list(workshop)
         if form.validate():
-            if app.config['S3_OR_DBX'] == 'S3':  # Get filename only
-                filename = request.form['filename_s3']
-            else:  # Also get file
-                if 'file' in request.files:
-                    file = request.files['file']
-                    filename = str(randint(10000, 99999)) + \
-                        '_' + secure_filename(file.filename)
-                else:
-                    filename = ''
+            if 'file' in request.files:
+                file = request.files['file']
+                filename = str(randint(10000, 99999)) + \
+                    '_' + secure_filename(file.filename)
+            else:
+                filename = ''
             # Delete old file if not blank:
             if not filename == '':
                 old_filename = result.filename
-                if app.config['S3_OR_DBX'] == 'S3':
-                    delete_file_from_s3(old_filename)
-                else:
-                    delete_file_from_dbx(old_filename)
-                    # Save new file to dropbox:
-                    upload_file_to_dbx(file, filename)
+                # dropbox
+                delete_file_from_dbx(old_filename)
+                # Save new file to dropbox:
+                upload_file_to_dbx(file, filename)
                 result.filename = filename
             # Get form info:
             title = form.title.data
@@ -686,11 +562,6 @@ def edit(id, S3_OR_DBX):
             flash('File edits successful', 'success')
             return redirect(url_for('index'))
         else:
-            # Delete file from S3 if not blank:
-            if app.config['S3_OR_DBX'] == 'S3':
-                filename = request.form['filename_s3']
-                if not filename == "":
-                    delete_file_from_s3(filename)
             # Flash error message:
             flash('Invalid option selected, please try to edit the file again', 'danger')
             return redirect(url_for('index'))
@@ -747,8 +618,7 @@ def download_timetable(id):
 @app.route('/view-timetable/<string:id>')
 @is_logged_in
 def view_timetable(id):
-    if app.config['S3_OR_DBX'] != 'DBX':
-        abort(403)
+    #dropbox
     result = Timetables.query.filter_by(id=id).first()
     if result is None:
         abort(404)
@@ -785,10 +655,8 @@ def delete_file(id):
     psql_delete(result)
     # Delete from cloud:
     try:
-        if app.config['S3_OR_DBX'] == 'S3':
-            delete_file_from_s3(filename)
-        else:
-            delete_file_from_dbx(filename)
+        #dropbox
+        delete_file_from_dbx(filename)
     except:
         flash("Unable to delete file from cloud", "warning")
     flash("File deleted", "success")
@@ -808,10 +676,8 @@ def delete_timetable(id):
     psql_delete(result)
     # Delete from cloud:
     try:
-        if app.config['S3_OR_DBX'] == 'S3':
-            delete_file_from_s3(filename)
-        else:
-            delete_file_from_dbx(filename)
+        # dropbox
+        delete_file_from_dbx(filename)
     except:
         flash("Unable to delete timetable from cloud", "warning")
     flash("Timetable deleted", "success")
