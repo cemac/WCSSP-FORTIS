@@ -1,19 +1,26 @@
-from flask import Flask, render_template, flash, redirect, url_for, request, g, session, abort, send_from_directory
-from wtforms import Form, validators, StringField, TextAreaField, SelectField, PasswordField
+import os
+import sys
+from flask import Flask, render_template, flash, redirect, url_for, request
+from flask import g, session, abort, send_from_directory
+from wtforms import Form, validators, StringField, TextAreaField
+from wtforms import SelectField, PasswordField
 from werkzeug.utils import secure_filename
 from passlib.hash import sha256_crypt
 from functools import wraps
-import os
-import pandas as pd
 from flask_sqlalchemy import SQLAlchemy
-import boto3
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 from random import randint
+import boto3
 import json
-import sys
-import dropbox
 import mammoth
-
+import pandas as pd
 app = Flask(__name__)
+
+# GoogleDrive authentication
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()
+drive = GoogleDrive(gauth)
 
 # Set config variables:
 assert "APP_SETTINGS" in os.environ, "APP_SETTINGS environment variable not set"
