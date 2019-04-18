@@ -1,1 +1,2 @@
 .env filter=git-crypt diff=git-crypt
+settings.yml filter=git-crypt diff=git-crypt
