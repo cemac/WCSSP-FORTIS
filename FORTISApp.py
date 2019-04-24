@@ -15,6 +15,7 @@ import boto3
 import json
 import mammoth
 import pandas as pd
+import chunked_transfer as ct
 app = Flask(__name__)
 
 # GoogleDrive authentication

@@ -1,2 +1,4 @@
 .env filter=git-crypt diff=git-crypt
 settings.yml filter=git-crypt diff=git-crypt
+client_secrets.json filter=git-crypt diff=git-crypt
+credentials.json filter=git-crypt diff=git-crypt
