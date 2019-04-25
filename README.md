@@ -4,14 +4,15 @@
   <br>
 </div>
 
-
  <h1> <center> WCSSP FORTIS teaching app </center> </h1>
 
 <!--- release table --->
-|  Version            | Release          |
-|---------------------|------------------|
-| **Current Stable**  | [![GitHubrelease](https://img.shields.io/badge/release-v.1.0-blue.svg)](https://github.com/cemac/WCSSP-FORTIS/releases/tag/1.0)|
-| **2019**            | *coming soon*    |
+
+| Version            | Release                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Current Stable** | [![GitHubrelease](https://img.shields.io/badge/release-v.1.0-blue.svg)](https://github.com/cemac/WCSSP-FORTIS/releases/tag/1.0) |
+| **2019**           | _coming soon_                                                                                                                   |
+
 <!--- table --->
 
 Repository for the [WCSSP FORTIS](https://www.metoffice.gov.uk/research/collaboration/newton/wcssp-se-asia/wp3) training tool. [(fortis-training.herokuapp.com)](http://fortis-training.herokuapp.com).
@@ -20,23 +21,24 @@ Repository for the [WCSSP FORTIS](https://www.metoffice.gov.uk/research/collabor
 
 ## Requirements
 
-*see Pipfile*
+* anaconda (reccomended) *see Requirements.txt*
+* git-crypt (optional sharing api keys)
+* heroku and googlecloud capability
 
-## Installation
+## Installation (UNIX)
 
-*coming soon*
+Recommended via anaconda - see
+
+```
+```
+
 
 <hr>
 
 ## Usage
 
-```bash
-git clone repo.git
-cd repo
-source .env
-python manage.py db upgrade
-python manage runserver
-```
+* [Developers](https://github.com/cemac/WCSSP-FORTIS/wiki/Developers-Guide)
+* [Users](https://github.com/cemac/WCSSP-FORTIS/wiki/User-Guide)
 
 <hr>
 
@@ -45,14 +47,13 @@ python manage runserver
 To make any code changes take effect on Heroku:
 $ git push heroku master
 
-
 ## Backups
 
-*coming soon*
+_coming soon_
 
 ## Flask App Custom features
 
-*coming soon*
+_coming soon_
 
 <hr>
 
@@ -62,4 +63,4 @@ This code is currently licensed under the [MIT license](https://choosealicense.c
 
 ## Acknowledgements
 
-*coming soon*
+_coming soon_
