@@ -8,20 +8,13 @@ from werkzeug.utils import secure_filename
 from passlib.hash import sha256_crypt
 from functools import wraps
 from flask_sqlalchemy import SQLAlchemy
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
 from random import randint
 import boto3
 import json
 import mammoth
 import pandas as pd
-import chunked_transfer as ct
+import googlefuncts as gcf
 app = Flask(__name__)
-
-# GoogleDrive authentication
-gauth = GoogleAuth()
-gauth.LocalWebserverAuth()
-drive = GoogleDrive(gauth)
 
 # Set config variables:
 assert "APP_SETTINGS" in os.environ, "APP_SETTINGS environment variable not set"
@@ -169,8 +162,8 @@ class UploadForm(Form):
 
 class RegisterForm(Form):
     username = StringField('Username',
-                           [validators.Regexp('^BMKG_participant-[0-9]{2}$',
-                                              message='Username must be of the form BMKG_participant-XX where XX is a two-digit number')])
+                           [validators.Regexp('^([A-Z]{4,})_participant-[0-9]{2}$',
+                                              message='Username must be of the form INST_participant-XX where XX is a two-digit number and INST is an institute referer')])
     password = PasswordField('Password',
                              [validators.Regexp('^([a-zA-Z0-9]{8,})$',
                                                 message='Password must be mimimum 8 characters and contain only uppercase letters, \
@@ -291,8 +284,7 @@ def timetables():
                 psql_delete(timetable)
                 # Delete from cloud:
                 try:
-                    #dropbox
-                    delete_file_from_dbx(old_filename)
+                    gcf.delete_blob('wcssp-fortis', workshop + '/' + old_filename)
                 except:
                     flash("Unable to delete timetable from cloud", "warning")
             # Insert new timetable into database:
@@ -300,7 +292,7 @@ def timetables():
                                 workshop=workshop, author=author)
             id = psql_insert(db_row)
             # dropbox
-            upload_file_to_dbx(file, filename)
+            gcf.upload_blob('wcssp-fortis', file, workshop + '/' + filename)
             # flash success message and reload page
             flash('Timetable uploaded successfully', 'success')
             return redirect(url_for('timetables'))
@@ -390,7 +382,7 @@ def upload(workshopID):
                            workshop=workshop, type=type, who=who, author=author)
             id = psql_insert(db_row)
             # Save file to dropbox
-            upload_file_to_dbx(file, filename)
+            gcf.upload_blob('wcssp-fortis', file, workshop + '/' + filename)
             # flash success message and reload page
             flash('File uploaded successfully', 'success')
             return redirect(url_for('upload', workshopID=workshopID))
@@ -504,7 +496,7 @@ def add_folder(id, parent):
 @app.route('/delete-folder/<string:id>', methods=["POST"])
 @is_logged_in_as_admin
 def delete_folder(id):
-    # Retrieve folder:
+    # Retrieve folder:Unable to download timetable
     folder = Folders.query.filter_by(id=id).first()
     if folder is None:
         abort(404)
@@ -551,10 +543,8 @@ def edit(id):
             # Delete old file if not blank:
             if not filename == '':
                 old_filename = result.filename
-                # dropbox
-                delete_file_from_dbx(old_filename)
-                # Save new file to dropbox:
-                upload_file_to_dbx(file, filename)
+                gcf.delete_blob('wcssp-fortis',  workshop + '/' + old_filename)
+                gcf.upload_blob('wcssp-fortis', file, workshop + '/' + filename)
                 result.filename = filename
             # Get form info:
             title = form.title.data
@@ -583,11 +573,12 @@ def download_file(id):
     result = Files.query.filter_by(id=id).first()
     if result is None:
         abort(404)
+    workshop = result.workshop
     filename = result.filename
     # Try to download the file from dbx to /tmp if it's not already there:
     if not os.path.exists('/tmp/' + filename):
         try:
-            download_file_from_dbx(filename)
+            gcf.download_blob('wcssp-fortis', workshop + '/' + filename, '/tmp/' + filename)
         except:
             flash("Unable to download file", "danger")
             return redirect(url_for('index'))
@@ -606,11 +597,12 @@ def download_timetable(id):
     result = Timetables.query.filter_by(id=id).first()
     if result is None:
         abort(404)
+    workshop = result.workshop
     filename = result.filename
     # Try to download the timetable from dbx to /tmp if it's not already there:
     if not os.path.exists('/tmp/' + filename):
         try:
-            download_file_from_dbx(filename)
+            gcf.download_blob('wcssp-fortis', workshop + '/' + filename, '/tmp/' + filename)
         except:
             flash("Unable to download timetable", "danger")
             return redirect(url_for('timetables'))
@@ -626,15 +618,15 @@ def download_timetable(id):
 @app.route('/view-timetable/<string:id>')
 @is_logged_in
 def view_timetable(id):
-    #dropbox
     result = Timetables.query.filter_by(id=id).first()
     if result is None:
         abort(404)
+    workshop = result.workshop
     filename = result.filename
     # Try to download the timetable from dbx to /tmp if it's not already there:
     if not os.path.exists('/tmp/' + filename):
         try:
-            download_file_from_dbx(filename)
+            gcf.download_blob('wcssp-fortis', workshop + '/' +  filename, '/tmp/' + filename)
         except:
             flash("Unable to download timetable", "danger")
             return redirect(url_for('timetables'))
@@ -658,13 +650,13 @@ def delete_file(id):
     result = Files.query.filter_by(id=id).first()
     if result is None:
         abort(404)
+    workshop = result.workshop
     filename = result.filename
     # Delete from DB:
     psql_delete(result)
     # Delete from cloud:
     try:
-        #dropbox
-        delete_file_from_dbx(filename)
+        gcf.delete_blob('wcssp-fortis',  workshop + '/' + filename)
     except:
         flash("Unable to delete file from cloud", "warning")
     flash("File deleted", "success")
@@ -679,13 +671,13 @@ def delete_timetable(id):
     result = Timetables.query.filter_by(id=id).first()
     if result is None:
         abort(404)
+    workshop = result.workshop
     filename = result.filename
     # Delete from DB:
     psql_delete(result)
     # Delete from cloud:
     try:
-        # dropbox
-        delete_file_from_dbx(filename)
+        gcf.delete_blob('wcssp-fortis',  workshop + '/' + filename)
     except:
         flash("Unable to delete timetable from cloud", "warning")
     flash("Timetable deleted", "success")
