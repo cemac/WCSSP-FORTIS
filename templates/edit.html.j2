@@ -4,19 +4,12 @@
   <h1>Edit file information</h1>
   <hr>
   <p><b>Browse to select a different file or leave blank if you only want to change the file information</b></p>
-  {% if S3_OR_DBX == 'S3' %}
-    <input type="file" id="file_input">
-    <p id="status"></p>
-    <br>
-  {% endif %}
   {% from "includes/_formhelpers.html.j2" import render_field %}
   <form id="edit-form" action=/edit/{{id}}/{{S3_OR_DBX}} method="POST" enctype="multipart/form-data">
-    {% if S3_OR_DBX == 'S3' %}
-      <input type="hidden" id="filename_s3" name="filename_s3" value="">
-    {% elif S3_OR_DBX == 'DBX' %}
+
       <input type="file" name="file">
       <br>
-    {% endif %}
+
     <div class="form-group">
       {{render_field(form.title, class_="form-control", placeholder="e.g.'Tropical cyclone track forecasting'. This is the name the trainees will see.")}}
       <br>
@@ -30,65 +23,4 @@
   </form>
 
   <hr>
-{% endblock %}
-
-{% block scripts %}
-{% if S3_OR_DBX == 'S3' %}
-<script>
-
-(function() {
-  document.getElementById("file_input").onchange = function(){
-    document.getElementById("submit_button").disabled = true;
-    document.getElementById("status").innerHTML = 'Checking file...';
-    var files = document.getElementById("file_input").files;
-    var file = files[0];
-    if(!file){
-      return alert("No file selected.");
-    }
-    getSignedRequest(file);
-  };
-})();
-
-function getSignedRequest(file){
-  var xhr = new XMLHttpRequest();
-  xhr.open("GET", "/sign_s3?file_name="+file.name+"&file_type="+file.type);
-  xhr.onreadystatechange = function(){
-    if(xhr.readyState === 4){
-      if(xhr.status === 200){
-        var response = JSON.parse(xhr.responseText);
-        uploadFile(file, response.data, response.url);
-      }
-      else{
-        alert("Could not get signed URL.");
-      }
-    }
-  };
-  xhr.send();
-}
-
-function uploadFile(file, s3Data, url){
-  var xhr = new XMLHttpRequest();
-  xhr.open("POST", s3Data.url);
-  var postData = new FormData();
-  for(key in s3Data.fields){
-    postData.append(key, s3Data.fields[key]);
-  }
-  postData.append('file', file);
-  xhr.onreadystatechange = function() {
-    if(xhr.readyState === 4){
-      if(xhr.status === 200 || xhr.status === 204){
-        document.getElementById("status").innerHTML = 'File checked. Make any more changes required and hit "Submit changes"';
-        document.getElementById("submit_button").disabled = false;
-        document.getElementById("filename_s3").value = s3Data.fields['key'];
-      }
-      else{
-        alert("Could not upload file.");
-      }
-   }
-  };
-  xhr.send(postData);
-}
-
-</script>
-{% endif %}
 {% endblock %}

@@ -15,17 +15,13 @@
     <tr>
       <td>{{row['workshop']}}</td>
       <td>
-        {% if (S3_OR_DBX == 'DBX') and ('.docx' in row['filename']) %}
+        {% if ('.docx' in row['filename']) %}
           <a href="/view-timetable/{{row['id']}}" target="_blank" >Click to view</a>
           <br>
         {% endif %}
-        {% if S3_OR_DBX == 'S3' %}
-          <a href="#" onclick="getSignedRequestForDownload({{row['id']}})">Click to download</a>
-        {% elif S3_OR_DBX == 'DBX' %}
           <form action=/download-timetable/{{row['id']}} method="post">
-            <a href="#" onclick="this.parentNode.submit()">Click to download</a>
+          <a href="#" onclick="this.parentNode.submit()">Click to download</a>
           </form>
-        {% endif %}
       </td>
       <td>
         {% if session.username == row['author'] or session.username == 'admin' %}
@@ -45,104 +41,15 @@
   <br>
   <p><b>Note: </b>This will overwrite any previously-uploaded timetable for the selected workshop</p>
   <p><b>Note 2: </b>If you upload a .docx file, the user will be able to view the timetable directly in the web browser</p>
-  {% if S3_OR_DBX == 'S3' %}
-    <input type="file" id="file_input" autofocus>
-    <p id="status">Please select a file</p>
-  {% endif %}
   {% from "includes/_formhelpers.html.j2" import render_field %}
   <form role="form" method="POST" action=/timetables enctype="multipart/form-data">
-    {% if S3_OR_DBX == 'S3' %}
-      <input type="hidden" id="filename_s3" name="filename_s3" value="">
-    {% elif S3_OR_DBX == 'DBX' %}
       <input type="file" name="file" autofocus required>
       <br>
-    {% endif %}
     <div class="form-group">
       {{render_field(form.workshop, class_="form-control")}}
     </div>
-    {% if S3_OR_DBX == 'S3' %}
-      <button type="submit" class="btn btn-success" id="submit_button" disabled>Upload timetable</button>
-    {% elif S3_OR_DBX == 'DBX' %}
       <button type="submit" class="btn btn-success">Upload material</button>
-    {% endif %}
   </form>
 {% endif %}
 
-{% endblock %}
-
-{% block scripts %}
-{% if S3_OR_DBX == 'S3' %}
-<script>
-
-(function() {
-  document.getElementById("file_input").onchange = function(){
-    document.getElementById("status").innerHTML = 'Checking file...';
-    var files = document.getElementById("file_input").files;
-    var file = files[0];
-    if(!file){
-      return alert("No file selected.");
-    }
-    getSignedRequest(file);
-  };
-})();
-
-function getSignedRequest(file){
-  var xhr = new XMLHttpRequest();
-  xhr.open("GET", "/sign_s3?file_name="+file.name+"&file_type="+file.type);
-  xhr.onreadystatechange = function(){
-    if(xhr.readyState === 4){
-      if(xhr.status === 200){
-        var response = JSON.parse(xhr.responseText);
-        uploadFile(file, response.data, response.url);
-      }
-      else{
-        alert("Could not get signed URL.");
-      }
-    }
-  };
-  xhr.send();
-}
-
-function uploadFile(file, s3Data, url){
-  var xhr = new XMLHttpRequest();
-  xhr.open("POST", s3Data.url);
-  var postData = new FormData();
-  for(key in s3Data.fields){
-    postData.append(key, s3Data.fields[key]);
-  }
-  postData.append('file', file);
-  xhr.onreadystatechange = function() {
-    if(xhr.readyState === 4){
-      if(xhr.status === 200 || xhr.status === 204){
-        document.getElementById("status").innerHTML = 'File checked. Fill in the rest of the form and hit "Upload timetable"';
-        document.getElementById("submit_button").disabled = false;
-        document.getElementById("filename_s3").value = s3Data.fields['key'];
-      }
-      else{
-        alert("Could not upload file.");
-      }
-   }
-  };
-  xhr.send(postData);
-}
-
-function getSignedRequestForDownload(id){
-  var xhr = new XMLHttpRequest();
-  xhr.open("GET", "/sign_s3_download_timetable?id="+id);
-  xhr.onreadystatechange = function(){
-    if(xhr.readyState === 4){
-      if(xhr.status === 200){
-        var response = JSON.parse(xhr.responseText);
-        window.open(response.url);
-      }
-      else{
-        alert("Could not get signed URL.");
-      }
-    }
-  };
-  xhr.send();
-}
-
-</script>
-{% endif %}
 {% endblock %}
