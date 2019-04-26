@@ -5,7 +5,7 @@ alembic=1.0.7=pypi_0
 asn1crypto=0.24.0=py37_1003
 boto3=1.9.89=pypi_0
 botocore=1.12.89=pypi_0
-ca-certificates=2019.3.9=hecc5488_0
+ca-certificates=2019.1.23=0
 cachetools=2.1.0=py_0
 certifi=2019.3.9=py37_0
 cffi=1.12.3=py37h8022711_0
@@ -25,6 +25,7 @@ google-cloud-core=0.29.1=py_0
 google-cloud-storage=1.15.0=py_0
 google-resumable-media=0.3.2=py_0
 googleapis-common-protos=1.5.9=1
+gunicorn=19.9.0=py37_0
 idna=2.8=pypi_0
 itsdangerous=1.1.0=pypi_0
 jinja2=2.10=pypi_0
@@ -41,7 +42,7 @@ mammoth=1.4.8=pypi_0
 markupsafe=1.1.0=pypi_0
 ncurses=6.1=he6710b0_1
 numpy=1.16.1=pypi_0
-openssl=1.1.1b=h14c3975_1
+openssl=1.1.1b=h7b6447c_1
 pandas=0.24.1=pypi_0
 passlib=1.7.1=pypi_0
 pip=19.0.1=py37_0
