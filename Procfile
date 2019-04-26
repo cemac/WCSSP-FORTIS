@@ -1,1 +1,1 @@
-web: gunicorn FORTISApp:app
+web: gunicorn FORTISApp:app --timeout 60
