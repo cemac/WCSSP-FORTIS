@@ -7,7 +7,9 @@
  <h1> <center> WCSSP FORTIS teaching app </center> </h1>
 
 
-[![GitHub release](https://img.shields.io/github/release/cemac/WCSSP-FORTIS.svg)](https://github.com/cemac/WCSSP-FORTIS/releases) [![GitHub top language](https://img.shields.io/github/languages/top/cemac/WCSSP-FORTIS.svg)](https://github.com/cemac/WCSSP-FORTIS) [![GitHub issues](https://img.shields.io/github/issues/cemac/WCSSP-FORTIS.svg)](https://github.com/cemac/WCSSP-FORTIS/issues) [![GitHub last commit](https://img.shields.io/github/last-commit/cemac/WCSSP-FORTIS.svg)](https://github.com/cemac/WCSSP-FORTIS/commits/master) [![GitHub All Releases](https://img.shields.io/github/downloads/cemac/WCSSP-FORTIS/total.svg)](https://github.com/cemac/WCSSP-FORTIS/releases)
+[![GitHub release](https://img.shields.io/github/release/cemac/WCSSP-FORTIS.svg)](https://github.com/cemac/WCSSP-FORTIS/releases) [![GitHub top language](https://img.shields.io/github/languages/top/cemac/WCSSP-FORTIS.svg)](https://github.com/cemac/WCSSP-FORTIS) [![GitHub issues](https://img.shields.io/github/issues/cemac/WCSSP-FORTIS.svg)](https://github.com/cemac/WCSSP-FORTIS/issues) [![GitHub last commit](https://img.shields.io/github/last-commit/cemac/WCSSP-FORTIS.svg)](https://github.com/cemac/WCSSP-FORTIS/commits/master) [![GitHub All Releases](https://img.shields.io/github/downloads/cemac/WCSSP-FORTIS/total.svg)](https://github.com/cemac/WCSSP-FORTIS/releases) [![DOI](https://zenodo.org/badge/136025411.svg)](https://zenodo.org/badge/latestdoi/136025411)
+
+
 
 
 Repository for the [WCSSP FORTIS](https://www.metoffice.gov.uk/research/collaboration/newton/wcssp-se-asia/wp3) training tool. [(fortis-training.herokuapp.com)](http://fortis-training.herokuapp.com).
