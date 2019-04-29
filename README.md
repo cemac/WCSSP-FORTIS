@@ -35,7 +35,7 @@ Recommended via anaconda - see Developers guide
 * [Developers](https://github.com/cemac/WCSSP-FORTIS/wiki/Developers-Guide)
 * [Users](https://github.com/cemac/WCSSP-FORTIS/wiki/User-Guide)
 
-**NB** .env can [be decrypted for CEMAC users](https://github.com/cemac/cemac_generic/wiki/Sensitive-information/)
+**NB** .env and credentials can [be decrypted for CEMAC users](https://github.com/cemac/cemac_generic/wiki/Sensitive-information/)
 
 *example .env coming soon*
 
