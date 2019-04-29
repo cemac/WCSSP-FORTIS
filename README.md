@@ -21,10 +21,11 @@ Repository for the [WCSSP FORTIS](https://www.metoffice.gov.uk/research/collabor
 * anaconda (reccomended) *see Requirements.txt*
 * git-crypt (optional sharing api keys)
 * heroku and googlecloud capability
+* APG (requires sudo)
 
 ## Installation (UNIX)
 
-Recommended via anaconda - see Developers guide
+Recommended via anaconda - see [Developers guide](https://github.com/cemac/WCSSP-FORTIS/wiki/Developers-Guide)
 
 
 <hr>
@@ -43,16 +44,15 @@ Recommended via anaconda - see Developers guide
 
 ## Hosting
 
-To make any code changes take effect on Heroku:
-$ git push heroku master
+Follow [Developers guide](https://github.com/cemac/WCSSP-FORTIS/wiki/Developers-Guide) for instructions to host on heroku.
+
+
 
 ## Backups
 
 _coming soon_
 
-## Flask App Custom features
 
-_coming soon_
 
 <hr>
 
@@ -60,7 +60,7 @@ _coming soon_
 |  Version            | Release          |
 |---------------------|------------------|
 | **Current Stable**  | [![GitHubrelease](https://img.shields.io/badge/release-v.1.0-blue.svg)](https://github.com/cemac/WCSSP-FORTIS/releases/tag/1.0)|
-| **2019**            | *coming soon*    |
+| **2019**            |  [![GitHubrelease](https://img.shields.io/badge/release-v.2.0-blue.svg)](https://github.com/cemac/WCSSP-FORTIS/releases/tag/2.0)  |
 <!--- table --->
 ## License Information
 
