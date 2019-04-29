@@ -1,5 +1,4 @@
 .directory
 __pycache__
-BACKUP
 client_secrets_heroku2.json
 client_secrets_heroku.json
