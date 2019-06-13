@@ -69,7 +69,6 @@ if [ "$runuzip" = true ]; then
   cd ..
   fname=${fname:0:(-4)}
 fi
-
 echo 'Creating folder structure...'
 mkdir ${fname}_tidy
 cd ${fname}_tidy
@@ -91,10 +90,10 @@ do
     echo "Files not formatted with standard file names"
     echo "Trying to work around please verify"
   fi
-  DayX1files=$(ls | grep "l${i}.")
-  DayX2files=$(ls | grep -i "_${i}.")
+  DayX1files=$(ls | grep -iF "l${i}.")
+  DayX2files=$(ls | grep -F "_${i}.")
   DayX3files=$(ls | grep -i "D$i")
-  DayX4files=$(ls | grep -i "_${i}_")
+  DayX4files=$(ls | grep -i "l_${i}_")
   DayXfiles="$DayXfiles $DayX1files $DayX2files $DayX3files $DayX4files"
   # Copy the files over
   cp -p $DayXfiles ../${fname}_tidy/Day_$i/
@@ -182,9 +181,11 @@ then
   esac
 else
   echo 'Completed folder tidy'
-  echo 'mismatching number of files - non standard names'
+  echo 'mismatching number of files'
   echo 'checking for duplicates - if cemac_tool check_dupes.sh available'
+  echo 'Duplicates:'
   chckdup=$(which check_dupes.sh)
+  echo 'Check DayX for any number sill in file name: e.g. 5.2 check day 5 and 2'
   if [ ! -z $chckdup ] ; then
     check_dupes.sh -f ${fname}_tidy
   else
@@ -192,5 +193,6 @@ else
     echo 'www.github.com/cemac/cemac_generic/blob/master/Tools/check_dupes.sh'
     echo 'or perform own duplicate check'
   fi
-
+  echo 'Missmatches that are not from duplicates arise from muliple versions of'
+  echo ' the same file - Requires Manual checking !'
 fi
