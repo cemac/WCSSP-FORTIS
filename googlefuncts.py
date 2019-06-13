@@ -110,6 +110,14 @@ def list_blobs(bucket_name):
         print(blob.name)
 
 
+def get_blobs(bucket_name, prefix):
+    """Return list of all the blobs in the bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket(bucket_name)
+    blobs = bucket.list_blobs(prefix=prefix)
+    return blobs
+
+
 def list_blobs_with_prefix(bucket_name, prefix, delimiter=None):
     """Lists all the blobs in the bucket that begin with the prefix.
 
