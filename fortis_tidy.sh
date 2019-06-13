@@ -56,6 +56,11 @@ echo 'from ' $fortisarchive
 echo 'to ' $outloc
 echo '....'
 # Unzip if asked for
+if [ ! -e $fname ]; then
+  echo "$fname does not exist"
+  echo "exiting ..."
+fi
+
 if [ "$runuzip" = true ]; then
   echo "unzipping"
   mkdir ${fname:0:(-4)}
@@ -83,15 +88,15 @@ do
   # If file naming convention is ignored then try your best to match
   if [ -z "$DayXfiles" ] ;
   then
-    DayX1files=$(ls | grep l$i.)
-    DayX2files=$(ls | grep -i "_$i.")
-    DayX3files=$(ls | grep -i "D$i")
-    DayXfiles="$DayX1files $DayX2files $DayX3files"
     echo "Files not formatted with standard file names"
     echo "Trying to work around please verify"
   fi
+  DayX1files=$(ls | grep "l${i}.")
+  DayX2files=$(ls | grep -i "_${i}.")
+  DayX3files=$(ls | grep -i "D$i")
+  DayX4files=$(ls | grep -i "_${i}_")
+  DayXfiles="$DayXfiles $DayX1files $DayX2files $DayX3files $DayX4files"
   # Copy the files over
-  echo $DayXfiles 
   cp -p $DayXfiles ../${fname}_tidy/Day_$i/
   filesT="$filesT $DayXfiles"
   cd ../${fname}_tidy/Day_$i
@@ -115,43 +120,43 @@ do
   done
   cd ../..
 done
-echo $filesT
 numFT=$(echo $filesT | wc -w)
 echo $numFT
 numFs=$(ls ../${fname}/* | wc -l)
 echo $numFs
 if [ ! $numFT == $numFs ] ;
- then
-   mkdir Uncategorised
-   cd ../${fname}
-   missedF=$(ls --ignore=${filesT})
-   echo $missedF
-   cp -p $missedF ../${fname}_tidy/Uncategorised/
-   cd ../${fname}_tidy
+then
+  mkdir Uncategorised
+  cd ../${fname}
+  # Copying over everything but, keeps failing
+  cp -p * ../${fname}_tidy/Uncategorised/
+  cd ../${fname}_tidy/Uncategorised/
+  rm -f $filesT
+  cd ..
 fi
 echo "checking files ..."
 # Check...
 badnames=$(find . \! \( -name FORTIS\* \) -type f)
 if [ -z "$badnames" ] ;
 then
- echo "All files meet convention"
+  echo "All files meet convention"
 else
- for line in $badnames ;
- do
-  numst=$(echo $line | grep -P -o '(?<!\d)\d{5}(?!\d)')
-  if [ ! -z $numst ];
-  then
-    NEW_FILENAME="$(echo $line | sed -e "s|${numst}_||g")";
-    mv $line $NEW_FILENAME
-    line=$NEW_FILENAME
-  fi
-  fortmis=$(echo $line | grep "/_")
-  if [ ! -z $fortmis ] ;
-  then
-    NEW_FILENAME="$(echo $line | sed -e "s|/_|/FORTIS_|g")";
-    mv $line $NEW_FILENAME
-  fi
- done
+  for line in $badnames ;
+  do
+    numst=$(echo $line | grep -P -o '(?<!\d)\d{5}(?!\d)')
+    if [ ! -z $numst ];
+    then
+      NEW_FILENAME="$(echo $line | sed -e "s|${numst}_||g")";
+      mv $line $NEW_FILENAME
+      line=$NEW_FILENAME
+    fi
+    fortmis=$(echo $line | grep "/_")
+    if [ ! -z $fortmis ] ;
+    then
+      NEW_FILENAME="$(echo $line | sed -e "s|/_|/FORTIS_|g")";
+      mv $line $NEW_FILENAME
+    fi
+  done
 fi
 cd ..
 f_orgin=$(find $fname -type f | wc -l)
@@ -177,5 +182,15 @@ then
   esac
 else
   echo 'Completed folder tidy'
-  echo 'mismatching number of files - Please review non standard file names'
+  echo 'mismatching number of files - non standard names'
+  echo 'checking for duplicates - if cemac_tool check_dupes.sh available'
+  chckdup=$(which check_dupes.sh)
+  if [ ! -z $chckdup ] ; then
+    check_dupes.sh -f ${fname}_tidy
+  else
+    echo 'no check_dupes.sh found - please install from:'
+    echo 'www.github.com/cemac/cemac_generic/blob/master/Tools/check_dupes.sh'
+    echo 'or perform own duplicate check'
+  fi
+
 fi
