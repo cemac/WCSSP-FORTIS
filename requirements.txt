@@ -70,7 +70,7 @@ style=1.1.0=pypi_0
 tk=8.6.8=hbc83047_0
 update=0.0.1=pypi_0
 urllib3=1.24.2=pypi_0
-werkzeug=0.14.1=pypi_0
+werkzeug>=0.15.3
 wheel=0.32.3=py37_0
 wtforms=2.2.1=pypi_0
 xz=5.2.4=h14c3975_4
