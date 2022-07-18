@@ -10,10 +10,10 @@
 #============================================================================
 
 
-number_of_users=42
-usernamepat=BMKG_participant-
+number_of_users=60
+usernamepat=NCHMF_participant-
 password_file=~/users.txt
-for i in $(seq -f "%02g" 1 30) ;
+for i in $(seq -f "%02g" 1 60) ;
   do
   username=$usernamepat$i
   userpassword=`apg -n 1`
