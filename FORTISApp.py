@@ -226,10 +226,10 @@ def index():
                 # Passed
                 session['logged_in'] = True
                 session['username'] = username
-                if username not in ['juliane_schwendike', 'andrew_turner']:
+                if username != 'juliane_schwendike':
                     session['usertype'] = 'trainer'
                     flash('You are now logged in', 'success')
-                elif username in ['juliane_schwendike', 'andrew_turner']:
+                elif username == 'juliane_schwendike':
                     session['usertype'] = 'admin'
                     flash('You are now logged in with admin privillages', 'success')
                 return redirect(url_for('index'))
